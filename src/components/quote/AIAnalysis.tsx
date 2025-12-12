@@ -237,6 +237,48 @@ export default function AIAnalysis({
             height={375}
             className={styles.satelliteImage}
           />
+          
+          {/* AI Results Overlay */}
+          <div className={styles.resultsOverlay}>
+            <div className={styles.overlayTitle}>🤖 AI Detected:</div>
+            <div className={styles.overlayGrid}>
+              <div className={styles.overlayItem}>
+                <span className={styles.overlayIcon}>🌿</span>
+                <span className={styles.overlayValue}>{editedAnalysis?.lawnSqft?.toLocaleString() || 0}</span>
+                <span className={styles.overlayLabel}>sq ft lawn</span>
+              </div>
+              <div className={styles.overlayItem}>
+                <span className={styles.overlayIcon}>🌳</span>
+                <span className={styles.overlayValue}>{editedAnalysis?.treeCount || 0}</span>
+                <span className={styles.overlayLabel}>trees</span>
+              </div>
+              <div className={styles.overlayItem}>
+                <span className={styles.overlayIcon}>🌲</span>
+                <span className={styles.overlayValue}>{editedAnalysis?.bushCount || 0}</span>
+                <span className={styles.overlayLabel}>bushes</span>
+              </div>
+              <div className={styles.overlayItem}>
+                <span className={styles.overlayIcon}>🌺</span>
+                <span className={styles.overlayValue}>{editedAnalysis?.gardenBeds || 0}</span>
+                <span className={styles.overlayLabel}>garden beds</span>
+              </div>
+              {editedAnalysis?.hasPool && (
+                <div className={styles.overlayItem}>
+                  <span className={styles.overlayIcon}>🏊</span>
+                  <span className={styles.overlayValue}>Yes</span>
+                  <span className={styles.overlayLabel}>pool</span>
+                </div>
+              )}
+              {editedAnalysis?.hasFence && (
+                <div className={styles.overlayItem}>
+                  <span className={styles.overlayIcon}>🚧</span>
+                  <span className={styles.overlayValue}>Yes</span>
+                  <span className={styles.overlayLabel}>fence</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
           <div className={styles.imageLabel}>{imageUrls[activeImageIndex].label}</div>
           <div className={styles.carouselNav}>
             <button 
