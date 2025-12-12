@@ -173,9 +173,9 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
 
     console.log("[AI Analysis] Calling Gemini API...");
 
-    // Call Gemini API
+    // Call Gemini API with vision model
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
