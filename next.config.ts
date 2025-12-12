@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: "maps.googleapis.com",
         pathname: "/maps/api/staticmap/**",
       },
+      {
+        protocol: "https",
+        hostname: "maps.googleapis.com",
+        pathname: "/maps/api/streetview/**",
+      },
     ],
   },
 };
