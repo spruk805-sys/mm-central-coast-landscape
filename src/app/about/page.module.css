@@ -1,0 +1,462 @@
+.aboutPage {
+  padding-top: 80px;
+}
+
+/* Hero */
+.hero {
+  background: var(--gradient-hero);
+  color: var(--color-white);
+  padding: var(--space-16) 0;
+  text-align: center;
+}
+
+.heroTag {
+  display: inline-block;
+  padding: var(--space-2) var(--space-5);
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  margin-bottom: var(--space-4);
+}
+
+.heroTitle {
+  font-size: var(--text-5xl);
+  margin-bottom: var(--space-4);
+  color: var(--color-white);
+}
+
+.heroSubtitle {
+  font-size: var(--text-xl);
+  opacity: 0.9;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Section Styles */
+.sectionHeader {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto var(--space-10);
+}
+
+.sectionTitle {
+  font-size: var(--text-3xl);
+  margin-bottom: var(--space-3);
+  color: var(--color-black);
+}
+
+.sectionSubtitle {
+  font-size: var(--text-lg);
+  color: var(--color-gray);
+}
+
+/* Story Section */
+.storySection {
+  background: var(--color-white);
+}
+
+.storyGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--space-12);
+  align-items: center;
+}
+
+.storyImage {
+  position: relative;
+}
+
+.imagePlaceholder {
+  aspect-ratio: 4/3;
+  background: var(--gradient-hero);
+  border-radius: var(--radius-2xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+}
+
+.imagePlaceholder span {
+  font-size: 5rem;
+  margin-bottom: var(--space-3);
+}
+
+.imagePlaceholder p {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+}
+
+.floatingBadge {
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  background: var(--color-white);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+  animation: float 3s ease-in-out infinite;
+}
+
+.badgeValue {
+  display: block;
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--color-primary);
+}
+
+.badgeLabel {
+  font-size: var(--text-sm);
+  color: var(--color-gray);
+}
+
+.storyContent {
+  max-width: 600px;
+}
+
+.storyText {
+  font-size: var(--text-lg);
+  color: var(--color-gray);
+  line-height: 1.8;
+  margin-bottom: var(--space-4);
+}
+
+.credentials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.credential {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(45, 90, 39, 0.1);
+  color: var(--color-primary);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+/* Values Section */
+.valuesSection {
+  background: var(--color-off-white);
+}
+
+.valuesGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+}
+
+.valueCard {
+  background: var(--color-white);
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+}
+
+.valueCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.valueIcon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-4);
+}
+
+.valueTitle {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-2);
+  color: var(--color-black);
+}
+
+.valueDescription {
+  font-size: var(--text-sm);
+  color: var(--color-gray);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Team Section */
+.teamSection {
+  background: var(--color-white);
+}
+
+.teamGrid {
+  display: flex;
+  justify-content: center;
+}
+
+.teamCard {
+  max-width: 400px;
+  text-align: center;
+  background: var(--color-off-white);
+  padding: var(--space-8);
+  border-radius: var(--radius-2xl);
+}
+
+.teamAvatar {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-4xl);
+  font-weight: var(--font-bold);
+  color: var(--color-white);
+  background: var(--gradient-hero);
+  border-radius: var(--radius-full);
+}
+
+.teamName {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-2);
+  color: var(--color-black);
+}
+
+.teamRole {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
+  margin-bottom: var(--space-1);
+}
+
+.teamExperience {
+  font-size: var(--text-sm);
+  color: var(--color-gray);
+  margin-bottom: var(--space-4);
+}
+
+.teamBio {
+  font-size: var(--text-base);
+  color: var(--color-gray);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* Timeline Section */
+.timelineSection {
+  background: var(--color-off-white);
+}
+
+.timeline {
+  max-width: 700px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 100px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-primary);
+}
+
+.timelineItem {
+  display: flex;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+  position: relative;
+}
+
+.timelineYear {
+  width: 80px;
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-primary);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.timelineContent {
+  flex: 1;
+  background: var(--color-white);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.timelineDot {
+  position: absolute;
+  left: -26px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: var(--color-primary);
+  border: 3px solid var(--color-white);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.timelineContent p {
+  margin: 0;
+  color: var(--color-dark-gray);
+}
+
+/* CTA Section */
+.cta {
+  background: var(--color-primary-dark);
+  padding: var(--space-16) 0;
+}
+
+.ctaContent {
+  text-align: center;
+  color: var(--color-white);
+}
+
+.ctaContent h2 {
+  font-size: var(--text-4xl);
+  margin-bottom: var(--space-3);
+  color: var(--color-white);
+}
+
+.ctaContent p {
+  font-size: var(--text-lg);
+  opacity: 0.9;
+  margin-bottom: var(--space-6);
+}
+
+.ctaActions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .storyGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  .storyImage {
+    order: -1;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .valuesGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: var(--text-4xl);
+  }
+
+  .valuesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline::before {
+    left: 20px;
+  }
+
+  .timelineYear {
+    width: auto;
+    position: absolute;
+    left: 40px;
+    top: -24px;
+    font-size: var(--text-sm);
+  }
+
+  .timelineItem {
+    padding-left: 50px;
+    padding-top: var(--space-4);
+  }
+
+  .timelineDot {
+    left: 14px;
+    top: 30px;
+    transform: none;
+  }
+
+  .floatingBadge {
+    bottom: -10px;
+    right: 10px;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .badgeValue {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* Anthem Section */
+.anthemSection {
+  background-color: var(--color-background-alt);
+  text-align: center;
+}
+
+.anthemContent {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.anthemHeader {
+  margin-bottom: 2rem;
+}
+
+.lyricsCard {
+  background: white;
+  padding: 3rem;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.lyricsCard::before {
+  content: "♪";
+  position: absolute;
+  top: -20px;
+  right: 20px;
+  font-size: 8rem;
+  opacity: 0.05;
+  color: var(--color-primary);
+  pointer-events: none;
+}
+
+.lyricsColumn p {
+  margin-bottom: 1.5rem;
+  line-height: 1.8;
+  color: var(--color-text-dim);
+  font-family: var(--font-body);
+}
+
+.chorus {
+  color: var(--color-primary) !important;
+  font-weight: 500;
+  font-style: italic;
+  padding-left: 1rem;
+  border-left: 2px solid var(--color-primary-light);
+}
+
+@media (max-width: 768px) {
+  .lyricsCard {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 2rem;
+  }
+}

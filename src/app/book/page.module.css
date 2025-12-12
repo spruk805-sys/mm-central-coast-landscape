@@ -1,0 +1,366 @@
+.bookPage {
+  padding-top: 80px;
+}
+
+/* Hero */
+.hero {
+  background: var(--gradient-hero);
+  color: var(--color-white);
+  padding: var(--space-12) 0;
+  text-align: center;
+}
+
+.heroTag {
+  display: inline-block;
+  padding: var(--space-2) var(--space-5);
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  margin-bottom: var(--space-4);
+}
+
+.heroTitle {
+  font-size: var(--text-4xl);
+  margin-bottom: var(--space-3);
+  color: var(--color-white);
+}
+
+.heroSubtitle {
+  font-size: var(--text-lg);
+  opacity: 0.9;
+}
+
+/* Booking Section */
+.bookingSection {
+  background: var(--color-off-white);
+}
+
+.bookingGrid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+/* Cards */
+.calendarCard,
+.formCard {
+  background: var(--color-white);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-lg);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-6);
+  color: var(--color-black);
+}
+
+.cardIcon {
+  font-size: 1.5rem;
+}
+
+/* Calendar */
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.dateBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-3);
+  background: var(--color-off-white);
+  border: 2px solid transparent;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dateBtn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: rgba(45, 90, 39, 0.05);
+}
+
+.dateBtn.selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.dateBtn.unavailable {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dayName {
+  font-size: var(--text-xs);
+  color: inherit;
+  opacity: 0.7;
+}
+
+.dayNum {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+}
+
+.month {
+  font-size: var(--text-xs);
+  opacity: 0.7;
+}
+
+/* Time Slots */
+.timeSlots {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.slotsTitle {
+  font-size: var(--text-base);
+  margin-bottom: var(--space-4);
+  color: var(--color-dark-gray);
+}
+
+.slotsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+.slotBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4);
+  background: var(--color-off-white);
+  border: 2px solid transparent;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.slotBtn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: rgba(45, 90, 39, 0.05);
+}
+
+.slotBtn.selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.slotBtn.unavailable {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.slotLabel {
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-1);
+}
+
+.slotTime {
+  font-size: var(--text-sm);
+  opacity: 0.8;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.selectedInfo {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: rgba(45, 90, 39, 0.1);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-2);
+}
+
+.selectedItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-medium);
+  color: var(--color-primary);
+}
+
+.selectedIcon {
+  font-size: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-dark-gray);
+}
+
+.input,
+.textarea {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-base);
+  border: 2px solid var(--color-light-gray);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.submitBtn {
+  margin-top: var(--space-2);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Placeholder */
+.placeholder {
+  text-align: center;
+  padding: var(--space-12) var(--space-4);
+  color: var(--color-gray);
+}
+
+.placeholderIcon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+/* Success Section */
+.successSection {
+  background: var(--color-off-white);
+}
+
+.successCard {
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
+  background: var(--color-white);
+  padding: var(--space-10);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.successIcon {
+  font-size: 4rem;
+  margin-bottom: var(--space-4);
+}
+
+.successCard h2 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-6);
+}
+
+.bookingDetails {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.detailIcon {
+  font-size: 1.5rem;
+}
+
+.detailLabel {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-gray);
+}
+
+.detailValue {
+  font-weight: var(--font-bold);
+  color: var(--color-primary);
+}
+
+.confirmationText {
+  color: var(--color-gray);
+  margin-bottom: var(--space-6);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .bookingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: var(--text-3xl);
+  }
+
+  .calendar {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .calendarCard,
+  .formCard {
+    padding: var(--space-5);
+  }
+
+  .bookingDetails {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .slotsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .selectedInfo {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}

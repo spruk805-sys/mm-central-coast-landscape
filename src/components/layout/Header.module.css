@@ -1,0 +1,247 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-sticky);
+  padding: var(--space-4) 0;
+  transition: all var(--transition-base);
+}
+
+.header.scrolled {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-2) 0;
+}
+
+.headerContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+  color: var(--color-white);
+  transition: opacity var(--transition-fast);
+}
+
+.header.scrolled .logo {
+  color: var(--color-primary);
+}
+
+.logo:hover {
+  opacity: 0.9;
+}
+
+.logoIcon {
+  width: 60px;
+  height: 60px;
+  color: currentColor;
+}
+
+.logoIcon img {
+  border-radius: var(--radius-lg);
+}
+
+.logoIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.logoText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.logoTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+}
+
+.logoSubtitle {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  opacity: 0.9;
+}
+
+/* Navigation */
+.nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.navList {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.navLink {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-white);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.header.scrolled .navLink {
+  color: var(--color-dark-gray);
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: var(--color-accent);
+  transition: width var(--transition-fast);
+}
+
+.navLink:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.header.scrolled .navLink:hover {
+  background: var(--color-light-gray);
+  color: var(--color-primary);
+}
+
+.navLink:hover::after {
+  width: 60%;
+}
+
+/* Header Actions */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.phoneLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-white);
+  font-weight: var(--font-medium);
+  transition: color var(--transition-fast);
+}
+
+.header.scrolled .phoneLink {
+  color: var(--color-primary);
+}
+
+.phoneLink svg {
+  width: 18px;
+  height: 18px;
+}
+
+.phoneLink:hover {
+  color: var(--color-accent);
+}
+
+/* Mobile Menu Button */
+.mobileMenuBtn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  gap: 5px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.mobileMenuBtn span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--color-white);
+  border-radius: 2px;
+  transition: all var(--transition-fast);
+}
+
+.header.scrolled .mobileMenuBtn span {
+  background: var(--color-dark-gray);
+}
+
+.mobileMenuBtn.open span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.mobileMenuBtn.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.mobileMenuBtn.open span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .phoneLink span {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-primary-dark);
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-base);
+  }
+
+  .nav.navOpen {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .navList {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .navLink {
+    font-size: var(--text-2xl);
+    padding: var(--space-3) var(--space-6);
+    color: var(--color-white);
+  }
+
+  .header.scrolled .navLink {
+    color: var(--color-white);
+  }
+
+  .mobileMenuBtn {
+    display: flex;
+    z-index: 10;
+  }
+
+  .headerActions .btn {
+    display: none;
+  }
+}

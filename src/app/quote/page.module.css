@@ -1,0 +1,170 @@
+.quotePage {
+  min-height: 100vh;
+  background: var(--color-off-white);
+  padding-top: 80px;
+}
+
+/* Header */
+.quoteHeader {
+  background: var(--gradient-hero);
+  color: var(--color-white);
+  padding: var(--space-12) 0;
+  text-align: center;
+}
+
+.quoteTitle {
+  font-size: var(--text-4xl);
+  margin-bottom: var(--space-3);
+  color: var(--color-white);
+}
+
+.quoteSubtitle {
+  font-size: var(--text-lg);
+  opacity: 0.9;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Progress Steps */
+.progressContainer {
+  background: var(--color-white);
+  padding: var(--space-6) 0;
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 70px;
+  z-index: var(--z-sticky);
+}
+
+.progressTrack {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.progressStep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  position: relative;
+}
+
+.stepIcon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-light-gray);
+  color: var(--color-gray);
+  border-radius: var(--radius-full);
+  font-size: 1.25rem;
+  transition: all var(--transition-base);
+}
+
+.progressStep.active .stepIcon {
+  background: var(--color-primary);
+  color: var(--color-white);
+  box-shadow: var(--shadow-glow);
+}
+
+.progressStep.completed .stepIcon {
+  background: var(--color-success);
+  color: var(--color-white);
+}
+
+.stepLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-gray);
+  transition: color var(--transition-fast);
+}
+
+.progressStep.active .stepLabel {
+  color: var(--color-primary);
+  font-weight: var(--font-semibold);
+}
+
+.progressStep.completed .stepLabel {
+  color: var(--color-success);
+}
+
+.stepConnector {
+  width: 60px;
+  height: 2px;
+  background: var(--color-light-gray);
+  margin: 0 var(--space-2);
+  transition: background var(--transition-base);
+}
+
+.progressStep.completed .stepConnector {
+  background: var(--color-success);
+}
+
+/* Main Content */
+.quoteContent {
+  padding: var(--space-10) 0;
+}
+
+.quoteCard {
+  background: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--space-8);
+  min-height: 500px;
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Map Toggle */
+.mapToggle {
+  margin-top: var(--space-4);
+  text-align: center;
+}
+
+.toggleBtn {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  background: rgba(45, 90, 39, 0.05);
+  border: 1px dashed var(--color-primary);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.toggleBtn:hover {
+  background: rgba(45, 90, 39, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .quoteHeader {
+    padding: var(--space-8) 0;
+  }
+
+  .quoteTitle {
+    font-size: var(--text-3xl);
+  }
+
+  .progressTrack {
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .stepConnector {
+    display: none;
+  }
+
+  .stepLabel {
+    display: none;
+  }
+
+  .progressStep.active .stepLabel {
+    display: block;
+  }
+
+  .quoteCard {
+    padding: var(--space-5);
+    border-radius: var(--radius-xl);
+  }
+}

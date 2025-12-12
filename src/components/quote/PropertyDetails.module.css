@@ -1,0 +1,323 @@
+.propertyDetails {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-gray);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.backBtn:hover {
+  color: var(--color-primary);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-2);
+  color: var(--color-black);
+}
+
+.subtitle {
+  font-size: var(--text-base);
+  color: var(--color-gray);
+  margin: 0;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Section */
+.section {
+  padding: var(--space-6);
+  background: var(--color-off-white);
+  border-radius: var(--radius-xl);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-5);
+  color: var(--color-black);
+}
+
+.sectionIcon {
+  font-size: 1.5rem;
+}
+
+/* Field Grid */
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-5);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-dark-gray);
+}
+
+.inputGroup {
+  display: flex;
+  align-items: center;
+  background: var(--color-white);
+  border: 2px solid var(--color-light-gray);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.inputGroup:focus-within {
+  border-color: var(--color-primary);
+}
+
+.input {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-base);
+  border: none;
+  background: transparent;
+  outline: none;
+}
+
+.input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.inputSuffix {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-gray);
+  background: var(--color-off-white);
+  border-left: 1px solid var(--color-light-gray);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--color-gray);
+}
+
+/* Counter Group */
+.counterGroup {
+  display: flex;
+  align-items: center;
+  background: var(--color-white);
+  border: 2px solid var(--color-light-gray);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.counterBtn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--color-primary);
+  background: var(--color-off-white);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.counterBtn:hover {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.counterInput {
+  width: 60px;
+  padding: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  text-align: center;
+  border: none;
+  background: transparent;
+  outline: none;
+}
+
+.counterInput::-webkit-outer-spin-button,
+.counterInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Toggle Grid */
+.toggleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.toggleCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-white);
+  border: 2px solid var(--color-light-gray);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.toggleCard:hover {
+  border-color: var(--color-primary);
+}
+
+.toggleCard.active {
+  border-color: var(--color-primary);
+  background: rgba(45, 90, 39, 0.05);
+}
+
+.toggleInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggleContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.toggleIcon {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-1);
+}
+
+.toggleLabel {
+  font-weight: var(--font-semibold);
+  color: var(--color-black);
+}
+
+.toggleHint {
+  font-size: var(--text-xs);
+  color: var(--color-gray);
+}
+
+.toggleCheck {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-light-gray);
+  color: transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  transition: all var(--transition-fast);
+}
+
+.toggleCard.active .toggleCheck {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+/* Summary */
+.summary {
+  padding: var(--space-5);
+  background: linear-gradient(135deg, rgba(45, 90, 39, 0.1) 0%, rgba(124, 186, 61, 0.1) 100%);
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--color-primary);
+}
+
+.summaryTitle {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.summaryItem {
+  text-align: center;
+}
+
+.summaryValue {
+  display: block;
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-primary);
+}
+
+.summaryLabel {
+  font-size: var(--text-xs);
+  color: var(--color-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: var(--space-4);
+  }
+
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .toggleGrid {
+    grid-template-columns: 1fr;
+  }
+}
