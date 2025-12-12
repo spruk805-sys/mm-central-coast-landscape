@@ -275,42 +275,56 @@ export default function AddressSearch({ onSelect, scriptLoaded = false }: Addres
 
     setIsLocating(true);
     setError("");
+    console.log("[Location] Requesting geolocation...");
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
+        console.log("[Location] Got coordinates:", latitude, longitude);
         
         try {
-          // Reverse geocode to get address
-          if (window.google?.maps?.Geocoder) {
+          // Reverse geocode to get address - only if Google Maps script is loaded
+          if (scriptLoaded && window.google?.maps?.Geocoder) {
+            console.log("[Location] Using Google Geocoder for reverse geocoding");
             const geocoder = new google.maps.Geocoder();
-            const response = await geocoder.geocode({
-              location: { lat: latitude, lng: longitude }
-            });
             
-            if (response.results && response.results.length > 0) {
-              const formattedAddress = response.results[0].formatted_address;
-              setAddress(formattedAddress);
-              // Directly call onSelect with the coordinates
-              onSelect(formattedAddress, { lat: latitude, lng: longitude });
-            } else {
-              // Use coordinates directly if no address found
-              onSelect(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, { lat: latitude, lng: longitude });
-            }
+            geocoder.geocode(
+              { location: { lat: latitude, lng: longitude } },
+              (results, status) => {
+                console.log("[Location] Geocode response:", status, results?.length);
+                
+                if (status === "OK" && results && results.length > 0) {
+                  const formattedAddress = results[0].formatted_address;
+                  setAddress(formattedAddress);
+                  onSelect(formattedAddress, { lat: latitude, lng: longitude });
+                } else {
+                  console.log("[Location] Geocode failed, using coordinates");
+                  const coordAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                  setAddress(coordAddress);
+                  onSelect(coordAddress, { lat: latitude, lng: longitude });
+                }
+                setIsLocating(false);
+              }
+            );
           } else {
             // Fallback if geocoder not available
-            onSelect(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, { lat: latitude, lng: longitude });
+            console.log("[Location] Geocoder not available, using coordinates");
+            const coordAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            setAddress(coordAddress);
+            onSelect(coordAddress, { lat: latitude, lng: longitude });
+            setIsLocating(false);
           }
         } catch (err) {
-          console.error("Reverse geocoding failed:", err);
+          console.error("[Location] Reverse geocoding error:", err);
           // Still proceed with coordinates even if reverse geocoding fails
-          onSelect(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, { lat: latitude, lng: longitude });
-        } finally {
+          const coordAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          setAddress(coordAddress);
+          onSelect(coordAddress, { lat: latitude, lng: longitude });
           setIsLocating(false);
         }
       },
       (err) => {
-        console.error("Geolocation error:", err);
+        console.error("[Location] Geolocation error:", err);
         switch (err.code) {
           case err.PERMISSION_DENIED:
             setError("Location access denied. Please enable location services in your browser settings.");
@@ -328,7 +342,7 @@ export default function AddressSearch({ onSelect, scriptLoaded = false }: Addres
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 60000,
       }
     );

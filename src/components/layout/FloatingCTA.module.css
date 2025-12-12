@@ -1,0 +1,61 @@
+.floatingCTA {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  display: flex;
+  gap: var(--space-3);
+  z-index: 1000;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.floatingCTA.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.callButton,
+.quoteButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.callButton {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.quoteButton {
+  background: var(--color-white);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.callButton:hover,
+.quoteButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+}
+
+.callButton svg,
+.quoteButton svg {
+  flex-shrink: 0;
+}
+
+/* Hide on desktop */
+@media (min-width: 769px) {
+  .floatingCTA {
+    display: none;
+  }
+}
