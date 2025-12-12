@@ -345,8 +345,14 @@ export default function Home() {
             </div>
             <div className={styles.whyUsImage}>
               <div className={styles.imageFrame}>
-                <div className={styles.imagePlaceholder}>
-                  <span>🏡</span>
+                <Image 
+                  src="/images/gallery-1.jpg"
+                  alt="Beautiful landscape work by MM Central Coast Landscape"
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+                <div className={styles.imageOverlay}>
                   <p>Beautiful Landscapes Since 1995</p>
                 </div>
               </div>

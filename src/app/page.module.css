@@ -596,10 +596,28 @@
 }
 
 .imageFrame {
+  position: relative;
   aspect-ratio: 4/3;
   border-radius: var(--radius-2xl);
   overflow: hidden;
   box-shadow: var(--shadow-xl);
+}
+
+.imageOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.6) 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.imageOverlay p {
+  color: var(--color-white);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .imagePlaceholder {
