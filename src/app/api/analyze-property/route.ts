@@ -15,6 +15,7 @@ interface PropertyAnalysis {
 export async function POST(request: NextRequest) {
   try {
     const { lat, lng, address } = await request.json();
+    console.log("[AI Analysis] Starting analysis for:", { lat, lng, address });
 
     if (!lat || !lng) {
       return NextResponse.json(
@@ -26,42 +27,104 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
     const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
+    console.log("[AI Analysis] API keys configured:", { 
+      hasGeminiKey: !!apiKey, 
+      hasMapsKey: !!mapsApiKey,
+      geminiKeyPrefix: apiKey?.substring(0, 10) + "..."
+    });
+
     if (!apiKey) {
+      console.error("[AI Analysis] Missing GOOGLE_AI_STUDIO_KEY");
       return NextResponse.json(
-        { error: "AI Studio API key not configured" },
+        { error: "AI Studio API key not configured. Please add GOOGLE_AI_STUDIO_KEY to .env.local" },
         { status: 500 }
       );
     }
 
-    // Fetch satellite image from Google Maps Static API
-    const zoom = 20; // High zoom for property detail
+    // Fetch multiple satellite images at different zoom levels for comprehensive view
     const size = "640x640";
     const mapType = "satellite";
-    const satelliteUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
+    
+    // Multiple zoom levels: close-up (20), medium (19), wide (18)
+    const satelliteCloseUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=20&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
+    const satelliteMediumUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=19&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
+    const satelliteWideUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=18&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
 
-    // Fetch the satellite image
-    const imageResponse = await fetch(satelliteUrl);
-    if (!imageResponse.ok) {
-      console.error("Failed to fetch satellite image:", imageResponse.statusText);
+    // Multiple Street View angles (front, left, right)
+    const streetViewFrontUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${lat},${lng}&fov=100&pitch=10&key=${mapsApiKey}`;
+    const streetViewLeftUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${lat},${lng}&fov=100&heading=270&pitch=10&key=${mapsApiKey}`;
+    const streetViewRightUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${lat},${lng}&fov=100&heading=90&pitch=10&key=${mapsApiKey}`;
+
+    console.log("[AI Analysis] Fetching multiple satellite and street view images...");
+    
+    // Fetch all images in parallel
+    const [
+      satelliteCloseRes, 
+      satelliteMediumRes, 
+      satelliteWideRes,
+      streetViewFrontRes,
+      streetViewLeftRes,
+      streetViewRightRes
+    ] = await Promise.all([
+      fetch(satelliteCloseUrl),
+      fetch(satelliteMediumUrl),
+      fetch(satelliteWideUrl),
+      fetch(streetViewFrontUrl),
+      fetch(streetViewLeftUrl),
+      fetch(streetViewRightUrl)
+    ]);
+
+    if (!satelliteCloseRes.ok) {
+      console.error("[AI Analysis] Failed to fetch satellite image:", satelliteCloseRes.statusText);
       return NextResponse.json(
         { error: "Failed to fetch satellite image" },
         { status: 500 }
       );
     }
 
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const base64Image = Buffer.from(imageBuffer).toString("base64");
+    // Convert all satellite images to base64
+    const satelliteCloseBuffer = await satelliteCloseRes.arrayBuffer();
+    const base64SatelliteClose = Buffer.from(satelliteCloseBuffer).toString("base64");
+    
+    const satelliteMediumBuffer = await satelliteMediumRes.arrayBuffer();
+    const base64SatelliteMedium = Buffer.from(satelliteMediumBuffer).toString("base64");
+    
+    const satelliteWideBuffer = await satelliteWideRes.arrayBuffer();
+    const base64SatelliteWide = Buffer.from(satelliteWideBuffer).toString("base64");
+    
+    // Street view images (may not be available for all locations)
+    const streetViewImages: string[] = [];
+    
+    if (streetViewFrontRes.ok) {
+      const buffer = await streetViewFrontRes.arrayBuffer();
+      streetViewImages.push(Buffer.from(buffer).toString("base64"));
+    }
+    if (streetViewLeftRes.ok) {
+      const buffer = await streetViewLeftRes.arrayBuffer();
+      streetViewImages.push(Buffer.from(buffer).toString("base64"));
+    }
+    if (streetViewRightRes.ok) {
+      const buffer = await streetViewRightRes.arrayBuffer();
+      streetViewImages.push(Buffer.from(buffer).toString("base64"));
+    }
+    
+    console.log(`[AI Analysis] Fetched 3 satellite images and ${streetViewImages.length} street view images`);
 
-    // Prepare prompt for Gemini Vision
-    const analysisPrompt = `You are an expert landscaping property analyst. Analyze this satellite/aerial image of a residential property and provide detailed estimates.
+    // Prepare prompt for Gemini Vision with multiple perspectives
+    const imageCount = 3 + streetViewImages.length;
+    const analysisPrompt = `You are an expert landscaping property analyst. Analyze these ${imageCount} images of a residential property and provide detailed estimates for landscaping services.
 
 Property Address: ${address || "Unknown"}
 
-Please analyze the image and provide your best estimates for:
+I'm providing:
+- 3 SATELLITE VIEWS at different zoom levels (close-up, medium, wide) to see the property from above
+${streetViewImages.length > 0 ? `- ${streetViewImages.length} STREET VIEW image(s) showing the property from ground level` : ""}
 
-1. **Lawn Area**: Estimate the total square footage of grass/lawn areas visible. Consider the scale (this is approximately a 100ft x 100ft view area at this zoom level).
+Please analyze ALL images and provide your best estimates for:
 
-2. **Tree Count**: Count all visible trees (both large and small).
+1. **Lawn Area**: Estimate the total square footage of grass/lawn areas visible. Consider the scale (close-up satellite view is approximately 100ft x 100ft, medium is ~200ft, wide is ~400ft).
+
+2. **Tree Count**: Count all visible trees (both large and small) from satellite and street views.
 
 3. **Bush/Shrub Count**: Count visible bushes, hedges, and shrubs.
 
@@ -75,7 +138,7 @@ Please analyze the image and provide your best estimates for:
 
 8. **Confidence**: How confident are you in this analysis? (0.0 to 1.0)
 
-9. **Notes**: Any additional observations about the property that might affect landscaping services.
+9. **Notes**: Any additional observations about the property that might affect landscaping services (e.g., overgrown areas, dead plants, irrigation needs, condition of lawn from street view).
 
 Respond in the following JSON format ONLY (no markdown, no explanation, just the JSON):
 {
@@ -90,6 +153,26 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
   "notes": [<array of observation strings>]
 }`;
 
+    // Build the parts array with all images
+    const imageParts: Array<{ inline_data: { mime_type: string; data: string } } | { text: string }> = [
+      { text: analysisPrompt },
+      // Close-up satellite view
+      { inline_data: { mime_type: "image/png", data: base64SatelliteClose } },
+      // Medium satellite view
+      { inline_data: { mime_type: "image/png", data: base64SatelliteMedium } },
+      // Wide satellite view
+      { inline_data: { mime_type: "image/png", data: base64SatelliteWide } },
+    ];
+
+    // Add all street view images
+    for (const svImage of streetViewImages) {
+      imageParts.push({
+        inline_data: { mime_type: "image/jpeg", data: svImage },
+      });
+    }
+
+    console.log("[AI Analysis] Calling Gemini API...");
+
     // Call Gemini API
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -101,15 +184,7 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
         body: JSON.stringify({
           contents: [
             {
-              parts: [
-                { text: analysisPrompt },
-                {
-                  inline_data: {
-                    mime_type: "image/png",
-                    data: base64Image,
-                  },
-                },
-              ],
+              parts: imageParts,
             },
           ],
           generationConfig: {
@@ -124,12 +199,14 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
 
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
-      console.error("Gemini API error:", errorText);
+      console.error("[AI Analysis] Gemini API error:", geminiResponse.status, errorText);
       return NextResponse.json(
-        { error: "AI analysis failed", details: errorText },
+        { error: `AI analysis failed (${geminiResponse.status})`, details: errorText },
         { status: 500 }
       );
     }
+
+    console.log("[AI Analysis] Gemini response received");
 
     const geminiData = await geminiResponse.json();
     
@@ -186,7 +263,7 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
     return NextResponse.json({
       success: true,
       analysis: sanitizedAnalysis,
-      imageUrl: satelliteUrl,
+      imageUrl: satelliteCloseUrl,
     });
 
   } catch (error) {
