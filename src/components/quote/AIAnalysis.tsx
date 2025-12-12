@@ -35,6 +35,22 @@ export default function AIAnalysis({
   const [analysis, setAnalysis] = useState<PropertyAnalysis | null>(null);
   const [satelliteUrl, setSatelliteUrl] = useState<string | null>(null);
   const [editedAnalysis, setEditedAnalysis] = useState<PropertyAnalysis | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Generate all image URLs for the carousel
+  const getImageUrls = () => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    return [
+      { label: "Close-up Satellite", url: `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=20&size=640x640&maptype=satellite&key=${apiKey}` },
+      { label: "Medium Satellite", url: `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=19&size=640x640&maptype=satellite&key=${apiKey}` },
+      { label: "Wide Satellite", url: `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=18&size=640x640&maptype=satellite&key=${apiKey}` },
+      { label: "Street View Front", url: `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${coordinates.lat},${coordinates.lng}&fov=100&pitch=10&key=${apiKey}` },
+      { label: "Street View Left", url: `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${coordinates.lat},${coordinates.lng}&fov=100&heading=270&pitch=10&key=${apiKey}` },
+      { label: "Street View Right", url: `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${coordinates.lat},${coordinates.lng}&fov=100&heading=90&pitch=10&key=${apiKey}` },
+    ];
+  };
+
+  const imageUrls = getImageUrls();
 
   const runAnalysis = async () => {
     setIsAnalyzing(true);
@@ -79,6 +95,25 @@ export default function AIAnalysis({
     }
   };
 
+  const increment = (field: "lawnSqft" | "treeCount" | "bushCount" | "gardenBeds", amount: number) => {
+    if (editedAnalysis) {
+      const newValue = Math.max(0, (editedAnalysis[field] || 0) + amount);
+      setEditedAnalysis({ ...editedAnalysis, [field]: newValue });
+    }
+  };
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) return "#22c55e"; // green
+    if (confidence >= 0.6) return "#eab308"; // yellow
+    return "#ef4444"; // red
+  };
+
+  const getConfidenceLabel = (confidence: number) => {
+    if (confidence >= 0.8) return "High Confidence";
+    if (confidence >= 0.6) return "Medium Confidence";
+    return "Low Confidence - Please Review";
+  };
+
   // Initial state - show analyze button
   if (!analysis && !isAnalyzing) {
     return (
@@ -89,19 +124,31 @@ export default function AIAnalysis({
           </div>
           <h2 className={styles.title}>AI Property Analysis</h2>
           <p className={styles.description}>
-            Let our AI analyze satellite imagery of your property to automatically detect lawn areas, trees, bushes, and more.
+            Our AI will analyze 6 different views of your property to detect landscaping features.
           </p>
         </div>
 
-        <div className={styles.preview}>
-          <div className={styles.mapPreview}>
+        <div className={styles.imageCarousel}>
+          <div className={styles.carouselMain}>
             <Image
-              src={`https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=19&size=400x300&maptype=satellite&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
-              alt="Property satellite view"
+              src={imageUrls[activeImageIndex].url}
+              alt={imageUrls[activeImageIndex].label}
               width={400}
               height={300}
               className={styles.satelliteImage}
             />
+            <div className={styles.imageLabel}>{imageUrls[activeImageIndex].label}</div>
+          </div>
+          <div className={styles.carouselThumbs}>
+            {imageUrls.map((img, idx) => (
+              <button
+                key={idx}
+                className={`${styles.thumb} ${idx === activeImageIndex ? styles.thumbActive : ""}`}
+                onClick={() => setActiveImageIndex(idx)}
+              >
+                <Image src={img.url} alt={img.label} width={60} height={45} />
+              </button>
+            ))}
           </div>
           <p className={styles.addressLabel}>📍 {address}</p>
         </div>
@@ -135,118 +182,182 @@ export default function AIAnalysis({
           <div className={styles.spinner}></div>
           <h2 className={styles.title}>Analyzing Your Property...</h2>
           <p className={styles.description}>
-            Our AI is examining satellite imagery to detect landscaping features.
+            AI is examining 6 images from satellite and street view.
           </p>
           <div className={styles.steps}>
-            <div className={styles.step}>📡 Fetching satellite imagery...</div>
+            <div className={styles.step}>📡 Fetching 3 satellite views...</div>
+            <div className={styles.step}>🚗 Fetching 3 street views...</div>
             <div className={styles.step}>🌳 Detecting trees and vegetation...</div>
             <div className={styles.step}>📐 Calculating lawn area...</div>
-            <div className={styles.step}>🏠 Identifying property features...</div>
           </div>
         </div>
       </div>
     );
   }
 
-  // Results state
+  // Results state with image carousel and editable values
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h2 className={styles.title}>✨ Analysis Complete!</h2>
-        <p className={styles.description}>
-          Review and adjust the detected values below, then continue to get your quote.
-        </p>
-        <div className={styles.confidence}>
-          <span>AI Confidence:</span>
-          <div className={styles.confidenceBar}>
-            <div 
-              className={styles.confidenceFill}
-              style={{ width: `${(editedAnalysis?.confidence || 0) * 100}%` }}
-            />
-          </div>
-          <span>{Math.round((editedAnalysis?.confidence || 0) * 100)}%</span>
+      {/* Confidence Banner */}
+      <div 
+        className={styles.confidenceBanner}
+        style={{ backgroundColor: getConfidenceColor(editedAnalysis?.confidence || 0) + "20", borderColor: getConfidenceColor(editedAnalysis?.confidence || 0) }}
+      >
+        <div className={styles.confidenceIcon}>
+          {(editedAnalysis?.confidence || 0) >= 0.8 ? "✅" : (editedAnalysis?.confidence || 0) >= 0.6 ? "⚠️" : "⚠️"}
+        </div>
+        <div className={styles.confidenceInfo}>
+          <span className={styles.confidenceLabel}>{getConfidenceLabel(editedAnalysis?.confidence || 0)}</span>
+          <span className={styles.confidenceValue} style={{ color: getConfidenceColor(editedAnalysis?.confidence || 0) }}>
+            {Math.round((editedAnalysis?.confidence || 0) * 100)}% Accuracy
+          </span>
+        </div>
+        <div className={styles.confidenceBar}>
+          <div 
+            className={styles.confidenceFill}
+            style={{ width: `${(editedAnalysis?.confidence || 0) * 100}%`, backgroundColor: getConfidenceColor(editedAnalysis?.confidence || 0) }}
+          />
         </div>
       </div>
 
-      <div className={styles.resultsGrid}>
-        <div className={styles.imageSection}>
-          {satelliteUrl && (
-            <Image
-              src={satelliteUrl}
-              alt="Property satellite view"
-              width={400}
-              height={400}
-              className={styles.satelliteImage}
-            />
-          )}
-        </div>
+      <div className={styles.header}>
+        <h2 className={styles.title}>✨ Analysis Complete!</h2>
+        <p className={styles.description}>
+          Use + and - buttons to adjust values. Review all 6 views below.
+        </p>
+      </div>
 
-        <div className={styles.dataSection}>
-          <div className={styles.field}>
-            <label>🌿 Lawn Area (sq ft)</label>
+      {/* Image Carousel */}
+      <div className={styles.imageCarousel}>
+        <div className={styles.carouselMain}>
+          <Image
+            src={imageUrls[activeImageIndex].url}
+            alt={imageUrls[activeImageIndex].label}
+            width={500}
+            height={375}
+            className={styles.satelliteImage}
+          />
+          <div className={styles.imageLabel}>{imageUrls[activeImageIndex].label}</div>
+          <div className={styles.carouselNav}>
+            <button 
+              onClick={() => setActiveImageIndex((prev) => (prev - 1 + imageUrls.length) % imageUrls.length)}
+              className={styles.navBtn}
+            >
+              ←
+            </button>
+            <span>{activeImageIndex + 1} / {imageUrls.length}</span>
+            <button 
+              onClick={() => setActiveImageIndex((prev) => (prev + 1) % imageUrls.length)}
+              className={styles.navBtn}
+            >
+              →
+            </button>
+          </div>
+        </div>
+        <div className={styles.carouselThumbs}>
+          {imageUrls.map((img, idx) => (
+            <button
+              key={idx}
+              className={`${styles.thumb} ${idx === activeImageIndex ? styles.thumbActive : ""}`}
+              onClick={() => setActiveImageIndex(idx)}
+              title={img.label}
+            >
+              <Image src={img.url} alt={img.label} width={60} height={45} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Editable Values with +/- buttons */}
+      <div className={styles.valuesGrid}>
+        <div className={styles.valueCard}>
+          <span className={styles.valueIcon}>🌿</span>
+          <span className={styles.valueLabel}>Lawn Area</span>
+          <div className={styles.valueControls}>
+            <button onClick={() => increment("lawnSqft", -100)} className={styles.decrementBtn}>-100</button>
             <input
               type="number"
               value={editedAnalysis?.lawnSqft || 0}
               onChange={(e) => updateField("lawnSqft", parseInt(e.target.value) || 0)}
-              min="0"
+              className={styles.valueInput}
             />
+            <button onClick={() => increment("lawnSqft", 100)} className={styles.incrementBtn}>+100</button>
           </div>
+          <span className={styles.valueUnit}>sq ft</span>
+        </div>
 
-          <div className={styles.field}>
-            <label>🌳 Trees</label>
+        <div className={styles.valueCard}>
+          <span className={styles.valueIcon}>🌳</span>
+          <span className={styles.valueLabel}>Trees</span>
+          <div className={styles.valueControls}>
+            <button onClick={() => increment("treeCount", -1)} className={styles.decrementBtn}>-</button>
             <input
               type="number"
               value={editedAnalysis?.treeCount || 0}
               onChange={(e) => updateField("treeCount", parseInt(e.target.value) || 0)}
-              min="0"
+              className={styles.valueInput}
             />
+            <button onClick={() => increment("treeCount", 1)} className={styles.incrementBtn}>+</button>
           </div>
+        </div>
 
-          <div className={styles.field}>
-            <label>🌲 Bushes / Shrubs</label>
+        <div className={styles.valueCard}>
+          <span className={styles.valueIcon}>🌲</span>
+          <span className={styles.valueLabel}>Bushes</span>
+          <div className={styles.valueControls}>
+            <button onClick={() => increment("bushCount", -1)} className={styles.decrementBtn}>-</button>
             <input
               type="number"
               value={editedAnalysis?.bushCount || 0}
               onChange={(e) => updateField("bushCount", parseInt(e.target.value) || 0)}
-              min="0"
+              className={styles.valueInput}
             />
+            <button onClick={() => increment("bushCount", 1)} className={styles.incrementBtn}>+</button>
           </div>
+        </div>
 
-          <div className={styles.field}>
-            <label>🌺 Garden Beds</label>
+        <div className={styles.valueCard}>
+          <span className={styles.valueIcon}>🌺</span>
+          <span className={styles.valueLabel}>Garden Beds</span>
+          <div className={styles.valueControls}>
+            <button onClick={() => increment("gardenBeds", -1)} className={styles.decrementBtn}>-</button>
             <input
               type="number"
               value={editedAnalysis?.gardenBeds || 0}
               onChange={(e) => updateField("gardenBeds", parseInt(e.target.value) || 0)}
-              min="0"
+              className={styles.valueInput}
             />
+            <button onClick={() => increment("gardenBeds", 1)} className={styles.incrementBtn}>+</button>
           </div>
+        </div>
 
-          <div className={styles.toggleField}>
-            <label>🏊 Pool / Hot Tub</label>
-            <button
-              className={`${styles.toggle} ${editedAnalysis?.hasPool ? styles.toggleActive : ""}`}
-              onClick={() => updateField("hasPool", !editedAnalysis?.hasPool)}
-            >
-              {editedAnalysis?.hasPool ? "Yes" : "No"}
-            </button>
-          </div>
+        <div className={styles.valueCard}>
+          <span className={styles.valueIcon}>🏊</span>
+          <span className={styles.valueLabel}>Pool</span>
+          <button
+            className={`${styles.toggleBtn} ${editedAnalysis?.hasPool ? styles.toggleActive : ""}`}
+            onClick={() => updateField("hasPool", !editedAnalysis?.hasPool)}
+          >
+            {editedAnalysis?.hasPool ? "Yes" : "No"}
+          </button>
+        </div>
 
-          <div className={styles.toggleField}>
-            <label>🚧 Fence</label>
-            <button
-              className={`${styles.toggle} ${editedAnalysis?.hasFence ? styles.toggleActive : ""}`}
-              onClick={() => updateField("hasFence", !editedAnalysis?.hasFence)}
-            >
-              {editedAnalysis?.hasFence ? "Yes" : "No"}
-            </button>
-          </div>
+        <div className={styles.valueCard}>
+          <span className={styles.valueIcon}>🚧</span>
+          <span className={styles.valueLabel}>Fence</span>
+          <button
+            className={`${styles.toggleBtn} ${editedAnalysis?.hasFence ? styles.toggleActive : ""}`}
+            onClick={() => updateField("hasFence", !editedAnalysis?.hasFence)}
+          >
+            {editedAnalysis?.hasFence ? "Yes" : "No"}
+          </button>
         </div>
       </div>
 
+      {/* AI Notes */}
       {editedAnalysis?.notes && editedAnalysis.notes.length > 0 && (
         <div className={styles.notes}>
-          <h4>AI Observations:</h4>
+          <h4>🤖 AI Observations:</h4>
           <ul>
             {editedAnalysis.notes.map((note, i) => (
               <li key={i}>{note}</li>
