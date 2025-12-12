@@ -175,7 +175,7 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
 
     // Call Gemini API with vision model
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
@@ -200,6 +200,15 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
       console.error("[AI Analysis] Gemini API error:", geminiResponse.status, errorText);
+      
+      // Handle rate limiting with user-friendly message
+      if (geminiResponse.status === 429) {
+        return NextResponse.json(
+          { error: "AI analysis is temporarily unavailable due to high demand. Please try again in 30 seconds." },
+          { status: 429 }
+        );
+      }
+      
       return NextResponse.json(
         { error: `AI analysis failed (${geminiResponse.status})`, details: errorText },
         { status: 500 }
