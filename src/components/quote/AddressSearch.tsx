@@ -72,12 +72,18 @@ const mockGeocodeAddress = async (address: string): Promise<{ address: string; c
 
   return { address, coordinates: coords };
 };
-
 interface Suggestion {
   placeId: string;
   description: string;
   mainText: string;
   secondaryText: string;
+}
+
+interface LocationChoice {
+  address: string;
+  lat: number;
+  lng: number;
+  type: string;
 }
 
 export default function AddressSearch({ onSelect, scriptLoaded = false }: AddressSearchProps) {
@@ -88,6 +94,7 @@ export default function AddressSearch({ onSelect, scriptLoaded = false }: Addres
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [apiStatus, setApiStatus] = useState<string>("");
   const [isLocating, setIsLocating] = useState(false);
+  const [locationChoices, setLocationChoices] = useState<LocationChoice[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
@@ -275,12 +282,14 @@ export default function AddressSearch({ onSelect, scriptLoaded = false }: Addres
 
     setIsLocating(true);
     setError("");
+    setLocationChoices([]);
     console.log("[Location] Requesting geolocation...");
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        console.log("[Location] Got coordinates:", latitude, longitude);
+        const accuracy = position.coords.accuracy; // in meters
+        console.log("[Location] Got coordinates:", latitude, longitude, "accuracy:", accuracy, "m");
         
         try {
           // Reverse geocode to get address - only if Google Maps script is loaded
@@ -294,6 +303,39 @@ export default function AddressSearch({ onSelect, scriptLoaded = false }: Addres
                 console.log("[Location] Geocode response:", status, results?.length);
                 
                 if (status === "OK" && results && results.length > 0) {
+                  // If accuracy is poor (>50m) or multiple street-level results, show choices
+                  const streetAddresses = results.filter(r => 
+                    r.types.includes("street_address") || 
+                    r.types.includes("premise") ||
+                    r.types.includes("subpremise")
+                  );
+                  
+                  // Show choices if accuracy > 30m or we have multiple street addresses
+                  if (accuracy > 30 || streetAddresses.length > 1) {
+                    // Get up to 5 unique addresses
+                    const uniqueAddresses = new Map<string, LocationChoice>();
+                    results.slice(0, 8).forEach(r => {
+                      if (!uniqueAddresses.has(r.formatted_address)) {
+                        const loc = r.geometry.location;
+                        uniqueAddresses.set(r.formatted_address, {
+                          address: r.formatted_address,
+                          lat: loc.lat(),
+                          lng: loc.lng(),
+                          type: r.types[0] || "address"
+                        });
+                      }
+                    });
+                    
+                    const choices = Array.from(uniqueAddresses.values()).slice(0, 5);
+                    
+                    if (choices.length > 1) {
+                      setLocationChoices(choices);
+                      setIsLocating(false);
+                      return;
+                    }
+                  }
+                  
+                  // High precision - use first result directly
                   const formattedAddress = results[0].formatted_address;
                   setAddress(formattedAddress);
                   onSelect(formattedAddress, { lat: latitude, lng: longitude });
@@ -446,6 +488,46 @@ export default function AddressSearch({ onSelect, scriptLoaded = false }: Addres
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
+
+        {/* Location Choices - show when multiple results found */}
+        {locationChoices.length > 0 && (
+          <div className={styles.locationChoices}>
+            <h3 className={styles.choicesTitle}>
+              📍 Which address is correct?
+            </h3>
+            <p className={styles.choicesSubtitle}>
+              We found multiple possible addresses. Please select the most accurate one:
+            </p>
+            <div className={styles.choicesList}>
+              {locationChoices.map((choice, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={styles.choiceBtn}
+                  onClick={() => {
+                    setAddress(choice.address);
+                    setLocationChoices([]);
+                    onSelect(choice.address, { lat: choice.lat, lng: choice.lng });
+                  }}
+                >
+                  <span className={styles.choiceIcon}>
+                    {choice.type === "street_address" ? "🏠" : 
+                     choice.type === "premise" ? "🏢" : 
+                     choice.type === "route" ? "🛣️" : "📍"}
+                  </span>
+                  <span className={styles.choiceAddress}>{choice.address}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className={styles.cancelChoices}
+              onClick={() => setLocationChoices([])}
+            >
+              Cancel - Enter manually instead
+            </button>
+          </div>
+        )}
 
         <button
           type="submit"
