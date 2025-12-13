@@ -6,6 +6,8 @@ interface PropertyAnalysis {
   bushCount: number;
   hasPool: boolean;
   hasFence: boolean;
+  fenceLength: number;
+  pathwaySqft: number;
   gardenBeds: number;
   drivewayPresent: boolean;
   confidence: number;
@@ -132,13 +134,17 @@ Please analyze ALL images and provide your best estimates for:
 
 5. **Fence**: Are there visible fence lines around the property? (yes/no)
 
-6. **Garden Beds**: How many distinct garden/flower bed areas are visible?
+6. **Fence Length**: If there is a fence, estimate the total linear feet of fencing. If no fence, use 0.
 
-7. **Driveway**: Is there a driveway visible? (yes/no)
+7. **Pathway/Walkway Area**: Estimate the total square footage of pathways, walkways, stepping stones, and paved non-driveway areas.
 
-8. **Confidence**: How confident are you in this analysis? (0.0 to 1.0)
+8. **Garden Beds**: How many distinct garden/flower bed areas are visible?
 
-9. **Notes**: Any additional observations about the property that might affect landscaping services (e.g., overgrown areas, dead plants, irrigation needs, condition of lawn from street view).
+9. **Driveway**: Is there a driveway visible? (yes/no)
+
+10. **Confidence**: How confident are you in this analysis? (0.0 to 1.0)
+
+11. **Notes**: Any additional observations about the property that might affect landscaping services (e.g., overgrown areas, dead plants, irrigation needs, pathway condition, fence condition).
 
 Respond in the following JSON format ONLY (no markdown, no explanation, just the JSON):
 {
@@ -147,6 +153,8 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
   "bushCount": <number>,
   "hasPool": <boolean>,
   "hasFence": <boolean>,
+  "fenceLength": <number in linear feet>,
+  "pathwaySqft": <number in square feet>,
   "gardenBeds": <number>,
   "drivewayPresent": <boolean>,
   "confidence": <number between 0 and 1>,
@@ -249,6 +257,8 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
         bushCount: 8,
         hasPool: false,
         hasFence: true,
+        fenceLength: 150,
+        pathwaySqft: 200,
         gardenBeds: 2,
         drivewayPresent: true,
         confidence: 0.5,
@@ -263,6 +273,8 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
       bushCount: Math.max(0, Math.round(analysis.bushCount || 0)),
       hasPool: Boolean(analysis.hasPool),
       hasFence: Boolean(analysis.hasFence),
+      fenceLength: Math.max(0, Math.round(analysis.fenceLength || 0)),
+      pathwaySqft: Math.max(0, Math.round(analysis.pathwaySqft || 0)),
       gardenBeds: Math.max(0, Math.round(analysis.gardenBeds || 0)),
       drivewayPresent: Boolean(analysis.drivewayPresent),
       confidence: Math.min(1, Math.max(0, analysis.confidence || 0.7)),

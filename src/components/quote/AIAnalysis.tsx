@@ -11,6 +11,8 @@ interface PropertyAnalysis {
   bushCount: number;
   hasPool: boolean;
   hasFence: boolean;
+  fenceLength: number;
+  pathwaySqft: number;
   gardenBeds: number;
   drivewayPresent: boolean;
   confidence: number;
@@ -95,7 +97,7 @@ export default function AIAnalysis({
     }
   };
 
-  const increment = (field: "lawnSqft" | "treeCount" | "bushCount" | "gardenBeds", amount: number) => {
+  const increment = (field: "lawnSqft" | "treeCount" | "bushCount" | "gardenBeds" | "fenceLength" | "pathwaySqft", amount: number) => {
     if (editedAnalysis) {
       const newValue = Math.max(0, (editedAnalysis[field] || 0) + amount);
       setEditedAnalysis({ ...editedAnalysis, [field]: newValue });
@@ -262,18 +264,25 @@ export default function AIAnalysis({
                 <span className={styles.overlayValue}>{editedAnalysis?.gardenBeds || 0}</span>
                 <span className={styles.overlayLabel}>garden beds</span>
               </div>
+              {(editedAnalysis?.fenceLength || 0) > 0 && (
+                <div className={styles.overlayItem}>
+                  <span className={styles.overlayIcon}>🚧</span>
+                  <span className={styles.overlayValue}>{editedAnalysis?.fenceLength}</span>
+                  <span className={styles.overlayLabel}>ft fence</span>
+                </div>
+              )}
+              {(editedAnalysis?.pathwaySqft || 0) > 0 && (
+                <div className={styles.overlayItem}>
+                  <span className={styles.overlayIcon}>🛤️</span>
+                  <span className={styles.overlayValue}>{editedAnalysis?.pathwaySqft}</span>
+                  <span className={styles.overlayLabel}>sq ft path</span>
+                </div>
+              )}
               {editedAnalysis?.hasPool && (
                 <div className={styles.overlayItem}>
                   <span className={styles.overlayIcon}>🏊</span>
                   <span className={styles.overlayValue}>Yes</span>
                   <span className={styles.overlayLabel}>pool</span>
-                </div>
-              )}
-              {editedAnalysis?.hasFence && (
-                <div className={styles.overlayItem}>
-                  <span className={styles.overlayIcon}>🚧</span>
-                  <span className={styles.overlayValue}>Yes</span>
-                  <span className={styles.overlayLabel}>fence</span>
                 </div>
               )}
             </div>
@@ -371,6 +380,38 @@ export default function AIAnalysis({
             />
             <button onClick={() => increment("gardenBeds", 1)} className={styles.incrementBtn}>+</button>
           </div>
+        </div>
+
+        <div className={styles.valueCard}>
+          <span className={styles.valueIcon}>🚧</span>
+          <span className={styles.valueLabel}>Fence Length</span>
+          <div className={styles.valueControls}>
+            <button onClick={() => increment("fenceLength", -10)} className={styles.decrementBtn}>-10</button>
+            <input
+              type="number"
+              value={editedAnalysis?.fenceLength || 0}
+              onChange={(e) => updateField("fenceLength", parseInt(e.target.value) || 0)}
+              className={styles.valueInput}
+            />
+            <button onClick={() => increment("fenceLength", 10)} className={styles.incrementBtn}>+10</button>
+          </div>
+          <span className={styles.valueUnit}>linear ft</span>
+        </div>
+
+        <div className={styles.valueCard}>
+          <span className={styles.valueIcon}>🛤️</span>
+          <span className={styles.valueLabel}>Pathway</span>
+          <div className={styles.valueControls}>
+            <button onClick={() => increment("pathwaySqft", -25)} className={styles.decrementBtn}>-25</button>
+            <input
+              type="number"
+              value={editedAnalysis?.pathwaySqft || 0}
+              onChange={(e) => updateField("pathwaySqft", parseInt(e.target.value) || 0)}
+              className={styles.valueInput}
+            />
+            <button onClick={() => increment("pathwaySqft", 25)} className={styles.incrementBtn}>+25</button>
+          </div>
+          <span className={styles.valueUnit}>sq ft</span>
         </div>
 
         <div className={styles.valueCard}>
