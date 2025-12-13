@@ -265,10 +265,22 @@ ${parcelInfo}
 
 DO NOT include ANY features from neighboring properties. If you see fences, trees, or landscaping that clearly belong to adjacent lots, EXCLUDE them from your counts.
 
-**IMAGES PROVIDED:**
-- 3 SATELLITE VIEWS: Close-up (covers ~80ft x 80ft), Medium (~150ft x 150ft), Wide (~300ft x 300ft) - target property is ALWAYS at CENTER
-${streetViewImages.length > 0 ? `- ${streetViewImages.length} STREET VIEW image(s) from ground level facing the target property` : ""}
-${userPhotos.length > 0 ? `- ${userPhotos.length} USER-PROVIDED PHOTO(s) taken at the property` : ""}
+**IMAGES PROVIDED (analyze EACH image individually, then synthesize):**
+You will receive ${imageCount} images in this order:
+1. SATELLITE VIEW #1 (Zoom 21, ~40ft) - Very close aerial view, see fine details
+2. SATELLITE VIEW #2 (Zoom 20, ~80ft) - Close aerial view, see property layout
+3. SATELLITE VIEW #3 (Zoom 19, ~160ft) - Medium aerial view, see lot boundaries
+${streetViewImages.length > 0 ? `4-${3 + streetViewImages.length}. STREET VIEW (${streetViewImages.length} angles) - Ground level views of front yard, landscaping, trees` : ""}
+${userPhotos.length > 0 ? `${4 + streetViewImages.length}-${3 + streetViewImages.length + userPhotos.length}. USER PHOTOS (${userPhotos.length}) - Customer-provided images of their property` : ""}
+
+**MULTI-IMAGE ANALYSIS PROCESS:**
+1. Analyze EACH image separately - note what you see in each view
+2. Cross-reference findings between satellite and street views
+3. Use close satellite for lawn/pool/patio details
+4. Use medium satellite for tree count and property layout
+5. Use street view for front yard features, fence style, bush/shrub details
+6. Synthesize all observations into final counts
+7. If images disagree, trust the clearer/closer view
 
 **ANALYSIS REQUIRED (for the TARGET PROPERTY ONLY):**
 
