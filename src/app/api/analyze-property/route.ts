@@ -135,6 +135,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch Google Aerial View 3D video if available (US addresses only)
+    let aerialViewVideo: { url: string; type: string } | null = null;
+    if (address) {
+      try {
+        console.log("[AI Analysis] Checking for Aerial View video...");
+        const aerialUrl = `https://aerialview.googleapis.com/v1/videos:lookupVideo?key=${mapsApiKey}&address=${encodeURIComponent(address)}`;
+        
+        const aerialResponse = await fetch(aerialUrl, {
+          headers: { "Accept": "application/json" },
+        });
+
+        if (aerialResponse.ok) {
+          const aerialData = await aerialResponse.json();
+          if (aerialData.state === "ACTIVE" && aerialData.videos?.length > 0) {
+            // Get the first available video (usually MP4)
+            aerialViewVideo = {
+              url: aerialData.videos[0].uri,
+              type: aerialData.videos[0].mediaType || "video/mp4",
+            };
+            console.log("[AI Analysis] Aerial View video found:", aerialViewVideo.type);
+          }
+        }
+      } catch (err) {
+        console.log("[AI Analysis] Aerial View not available:", err);
+      }
+    }
+
     // Fetch multiple satellite images at different zoom levels for comprehensive view
     // Higher zoom = tighter focus on property to reduce neighbor inclusion
     const size = "640x640";
@@ -422,6 +449,13 @@ Respond in JSON format ONLY:
       success: true,
       analysis: sanitizedAnalysis,
       imageUrl: satelliteCloseUrl,
+      parcel: parcelData ? {
+        apn: parcelData.apn,
+        sqft: parcelData.sqft,
+        acres: parcelData.acres,
+        dimensions: parcelData.dimensions,
+      } : null,
+      aerialVideo: aerialViewVideo,
     });
 
   } catch (error) {
