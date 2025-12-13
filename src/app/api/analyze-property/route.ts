@@ -16,8 +16,28 @@ interface PropertyAnalysis {
 
 export async function POST(request: NextRequest) {
   try {
-    const { lat, lng, address } = await request.json();
-    console.log("[AI Analysis] Starting analysis for:", { lat, lng, address });
+    let lat: number, lng: number, address: string;
+    let userPhotos: File[] = [];
+    
+    // Check if request is FormData (has user photos) or JSON
+    const contentType = request.headers.get("content-type") || "";
+    
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      lat = parseFloat(formData.get("lat") as string);
+      lng = parseFloat(formData.get("lng") as string);
+      address = formData.get("address") as string || "";
+      userPhotos = formData.getAll("photos") as File[];
+      console.log("[AI Analysis] FormData request with", userPhotos.length, "user photos");
+    } else {
+      const json = await request.json();
+      lat = json.lat;
+      lng = json.lng;
+      address = json.address;
+      console.log("[AI Analysis] JSON request");
+    }
+    
+    console.log("[AI Analysis] Starting analysis for:", { lat, lng, address, userPhotoCount: userPhotos.length });
 
     if (!lat || !lng) {
       return NextResponse.json(
@@ -177,6 +197,22 @@ Respond in the following JSON format ONLY (no markdown, no explanation, just the
       imageParts.push({
         inline_data: { mime_type: "image/jpeg", data: svImage },
       });
+    }
+
+    // Add user-uploaded photos if provided
+    if (userPhotos.length > 0) {
+      console.log("[AI Analysis] Adding", userPhotos.length, "user photos to analysis");
+      for (const photo of userPhotos) {
+        try {
+          const bytes = await photo.arrayBuffer();
+          const base64 = Buffer.from(bytes).toString("base64");
+          imageParts.push({
+            inline_data: { mime_type: photo.type || "image/jpeg", data: base64 },
+          });
+        } catch (err) {
+          console.error("[AI Analysis] Failed to process user photo:", err);
+        }
+      }
     }
 
     console.log("[AI Analysis] Calling Gemini API...");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import styles from "./AIAnalysis.module.css";
 import type { Coordinates } from "@/types";
@@ -45,6 +45,10 @@ export default function AIAnalysis({
     pathway: true,
     pool: true,
   });
+  const [userPhotos, setUserPhotos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Generate all image URLs for the carousel
   const getImageUrls = () => {
@@ -61,20 +65,50 @@ export default function AIAnalysis({
 
   const imageUrls = getImageUrls();
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const newPhotos = [...userPhotos, ...files].slice(0, 6);
+    setUserPhotos(newPhotos);
+    setPhotoPreviews(newPhotos.map(f => URL.createObjectURL(f)));
+    e.target.value = '';
+  };
+
+  const removePhoto = (index: number) => {
+    const newPhotos = userPhotos.filter((_, i) => i !== index);
+    setUserPhotos(newPhotos);
+    setPhotoPreviews(newPhotos.map(f => URL.createObjectURL(f)));
+  };
+
   const runAnalysis = async () => {
     setIsAnalyzing(true);
     setError("");
 
     try {
-      const response = await fetch("/api/analyze-property", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lat: coordinates.lat,
-          lng: coordinates.lng,
-          address,
-        }),
-      });
+      // Use FormData if user has photos, otherwise JSON
+      let response;
+      if (userPhotos.length > 0) {
+        const formData = new FormData();
+        formData.append("lat", coordinates.lat.toString());
+        formData.append("lng", coordinates.lng.toString());
+        formData.append("address", address);
+        userPhotos.forEach(photo => formData.append("photos", photo));
+        
+        response = await fetch("/api/analyze-property", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        response = await fetch("/api/analyze-property", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lat: coordinates.lat,
+            lng: coordinates.lng,
+            address,
+          }),
+        });
+      }
 
       const data = await response.json();
 
@@ -162,6 +196,70 @@ export default function AIAnalysis({
           <p className={styles.addressLabel}>📍 {address}</p>
         </div>
 
+        {/* Photo Upload Section */}
+        <div className={styles.photoUploadSection}>
+          <h3 className={styles.photoTitle}>📸 Add Your Own Photos (Optional)</h3>
+          <p className={styles.photoSubtitle}>Take photos of your yard for more accurate analysis</p>
+          
+          <div className={styles.photoButtons}>
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className={styles.cameraBtn}
+            >
+              📷 Take Photo
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className={styles.uploadBtn}
+            >
+              📁 Choose Files
+            </button>
+          </div>
+
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handlePhotoSelect}
+            className={styles.hiddenInput}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handlePhotoSelect}
+            className={styles.hiddenInput}
+          />
+
+          {photoPreviews.length > 0 && (
+            <div className={styles.userPhotoGrid}>
+              {photoPreviews.map((preview, index) => (
+                <div key={index} className={styles.userPhotoItem}>
+                  <Image
+                    src={preview}
+                    alt={`Your photo ${index + 1}`}
+                    width={80}
+                    height={80}
+                    className={styles.userPhotoImg}
+                  />
+                  <button
+                    onClick={() => removePhoto(index)}
+                    className={styles.removePhotoBtn}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {userPhotos.length > 0 && (
+            <p className={styles.photoCount}>{userPhotos.length}/6 photos added • GPS: {coordinates.lat.toFixed(4)}, {coordinates.lng.toFixed(4)}</p>
+          )}
+        </div>
+
         {error && <p className={styles.error}>{error}</p>}
 
         <div className={styles.actions}>
@@ -170,7 +268,7 @@ export default function AIAnalysis({
             className="btn btn-primary btn-lg"
             disabled={isAnalyzing}
           >
-            🔍 Analyze Property with AI
+            🔍 Analyze Property with AI {userPhotos.length > 0 && `(+${userPhotos.length} photos)`}
           </button>
           <button
             onClick={onSkip}
