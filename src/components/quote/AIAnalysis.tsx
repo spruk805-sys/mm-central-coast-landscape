@@ -80,9 +80,30 @@ export default function AIAnalysis({
     setPhotoPreviews(newPhotos.map(f => URL.createObjectURL(f)));
   };
 
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+
+  // Clear countdown on unmount
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const startRetryTimer = (seconds: number) => {
+    setRetryCountdown(seconds);
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    timerRef.current = setInterval(() => {
+      setRetryCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const runAnalysis = async () => {
     setIsAnalyzing(true);
     setError("");
+    setRetryCountdown(null);
 
     try {
       // Use FormData if user has photos, otherwise JSON
@@ -111,6 +132,12 @@ export default function AIAnalysis({
       }
 
       const data = await response.json();
+
+      if (response.status === 429) {
+        const waitTime = 30;
+        startRetryTimer(waitTime);
+        throw new Error(`High demand! Retrying available in ${waitTime}s...`);
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Analysis failed");
@@ -261,14 +288,21 @@ export default function AIAnalysis({
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
+        {retryCountdown !== null && (
+          <div className={styles.retryMessage}>
+            Server busy. Auto-retry enabled in {retryCountdown}s
+          </div>
+        )}
 
         <div className={styles.actions}>
           <button
             onClick={runAnalysis}
             className="btn btn-primary btn-lg"
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || retryCountdown !== null}
           >
-            🔍 Analyze Property with AI {userPhotos.length > 0 && `(+${userPhotos.length} photos)`}
+            {retryCountdown !== null 
+              ? `⏳ Cooldown: ${retryCountdown}s` 
+              : `🔍 Analyze Property with AI ${userPhotos.length > 0 ? `(+${userPhotos.length} photos)` : ''}`}
           </button>
           <button
             onClick={onSkip}

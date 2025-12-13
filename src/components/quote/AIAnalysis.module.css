@@ -787,8 +787,21 @@
   color: white;
 }
 
+/* Retry Message */
+.retryMessage {
+  color: var(--color-warning);
+  text-align: center;
+  margin-bottom: var(--space-4);
+  font-weight: var(--font-medium);
+  animation: pulse 2s infinite;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  .container {
+    padding: var(--space-4);
+  }
+
   .resultsGrid {
     grid-template-columns: 1fr;
   }
@@ -796,18 +809,65 @@
   .valuesGrid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .photoButtons {
+    flex-direction: column;
+  }
+
+  .cameraBtn, .uploadBtn {
+    width: 100%;
+  }
+
+  /* Move overlay below image on mobile */
+  .resultsOverlay {
+    position: relative;
+    top: auto;
+    right: auto;
+    max-width: 100%;
+    margin-top: 0;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    background: rgba(0, 0, 0, 0.9);
+  }
   
   .confidenceBanner {
     flex-direction: column;
     text-align: center;
+    gap: var(--space-2);
+  }
+
+  .confidenceInfo {
+    align-items: center;
   }
   
   .carouselThumbs {
     gap: var(--space-1);
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+    flex-wrap: nowrap;
   }
   
+  .thumb {
+    flex: 0 0 auto;
+  }
+
   .thumb img {
-    width: 50px;
-    height: 38px;
+    width: 60px;
+    height: 45px;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .valuesGrid {
+    grid-template-columns: 1fr;
   }
 }
