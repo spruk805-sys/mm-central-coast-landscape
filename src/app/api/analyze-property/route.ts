@@ -64,13 +64,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch multiple satellite images at different zoom levels for comprehensive view
+    // Higher zoom = tighter focus on property to reduce neighbor inclusion
     const size = "640x640";
     const mapType = "satellite";
     
-    // Multiple zoom levels: close-up (20), medium (19), wide (18)
-    const satelliteCloseUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=20&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
-    const satelliteMediumUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=19&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
-    const satelliteWideUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=18&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
+    // Multiple zoom levels: very close (21), close (20), medium (19) - all centered on property
+    // Zoom 21 = ~40ft coverage, Zoom 20 = ~80ft, Zoom 19 = ~160ft
+    const satelliteCloseUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=21&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
+    const satelliteMediumUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=20&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
+    const satelliteWideUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=19&size=${size}&maptype=${mapType}&key=${mapsApiKey}`;
 
     // Multiple Street View angles (front, left, right)
     const streetViewFrontUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${lat},${lng}&fov=100&pitch=10&key=${mapsApiKey}`;
@@ -133,52 +135,63 @@ export async function POST(request: NextRequest) {
     console.log(`[AI Analysis] Fetched 3 satellite images and ${streetViewImages.length} street view images`);
 
     // Prepare prompt for Gemini Vision with multiple perspectives
-    const imageCount = 3 + streetViewImages.length;
-    const analysisPrompt = `You are an expert landscaping property analyst. Analyze these ${imageCount} images of a residential property and provide detailed estimates for landscaping services.
+    const imageCount = 3 + streetViewImages.length + userPhotos.length;
+    const analysisPrompt = `You are an expert landscaping property analyst. Analyze these ${imageCount} images of a SINGLE residential property and provide detailed estimates for landscaping services.
 
-Property Address: ${address || "Unknown"}
+**CRITICAL - PROPERTY BOUNDARY INSTRUCTIONS:**
+The property we are analyzing is located at: ${address || "Unknown"}
+GPS Coordinates: ${lat}, ${lng}
 
-I'm providing:
-- 3 SATELLITE VIEWS at different zoom levels (close-up, medium, wide) to see the property from above
-${streetViewImages.length > 0 ? `- ${streetViewImages.length} STREET VIEW image(s) showing the property from ground level` : ""}
+⚠️ IMPORTANT: The GPS coordinates mark the CENTER of the target property. 
+- In the CLOSE-UP satellite view (zoom 20), the TARGET PROPERTY fills most of the image - analyze ONLY this property
+- In the MEDIUM satellite view (zoom 19), the target property is in the CENTER - IGNORE surrounding properties
+- In the WIDE satellite view (zoom 18), you can see multiple properties - ONLY analyze the ONE in the CENTER
+- The Street View images show the target property from the street - focus on THIS property only
 
-Please analyze ALL images and provide your best estimates for:
+DO NOT include ANY features from neighboring properties. If you see fences, trees, or landscaping that clearly belong to adjacent lots, EXCLUDE them from your counts.
 
-1. **Lawn Area**: Estimate the total square footage of grass/lawn areas visible. Consider the scale (close-up satellite view is approximately 100ft x 100ft, medium is ~200ft, wide is ~400ft).
+**IMAGES PROVIDED:**
+- 3 SATELLITE VIEWS: Close-up (covers ~80ft x 80ft), Medium (~150ft x 150ft), Wide (~300ft x 300ft) - target property is ALWAYS at CENTER
+${streetViewImages.length > 0 ? `- ${streetViewImages.length} STREET VIEW image(s) from ground level facing the target property` : ""}
+${userPhotos.length > 0 ? `- ${userPhotos.length} USER-PROVIDED PHOTO(s) taken at the property` : ""}
 
-2. **Tree Count**: Count all visible trees (both large and small) from satellite and street views.
+**ANALYSIS REQUIRED (for the TARGET PROPERTY ONLY):**
 
-3. **Bush/Shrub Count**: Count visible bushes, hedges, and shrubs.
+1. **Lawn Area**: Estimate square footage of grass/lawn on the TARGET property only. Typical residential lots are 5,000-15,000 sq ft total. Be conservative.
 
-4. **Pool**: Is there a swimming pool or hot tub visible? (yes/no)
+2. **Tree Count**: Count trees ON the target property. Look for trees WITHIN the property footprint, not along street or in neighbor's yards.
 
-5. **Fence**: Are there visible fence lines around the property? (yes/no)
+3. **Bush/Shrub Count**: Count bushes and hedges that are clearly ON the target property.
 
-6. **Fence Length**: If there is a fence, estimate the total linear feet of fencing. If no fence, use 0.
+4. **Pool**: Is there a pool/hot tub on THIS property? (yes/no)
 
-7. **Pathway/Walkway Area**: Estimate the total square footage of pathways, walkways, stepping stones, and paved non-driveway areas.
+5. **Fence**: Does THIS property have fencing? Look for fence along property lines. (yes/no)
 
-8. **Garden Beds**: How many distinct garden/flower bed areas are visible?
+6. **Fence Length**: If fenced, estimate linear feet for THIS property only. Typical lot perimeter is 200-400 linear feet.
 
-9. **Driveway**: Is there a driveway visible? (yes/no)
+7. **Pathway Area**: Square footage of walkways on THIS property (front walk, side paths, back patio access).
 
-10. **Confidence**: How confident are you in this analysis? (0.0 to 1.0)
+8. **Garden Beds**: Count distinct garden/flower beds ON this property.
 
-11. **Notes**: Any additional observations about the property that might affect landscaping services (e.g., overgrown areas, dead plants, irrigation needs, pathway condition, fence condition).
+9. **Driveway**: Does THIS property have a driveway? (yes/no)
 
-Respond in the following JSON format ONLY (no markdown, no explanation, just the JSON):
+10. **Confidence**: How confident are you in focusing only on the correct property? (0.0 to 1.0)
+
+11. **Notes**: Observations about THIS property. If boundary was unclear in any image, note it here.
+
+Respond in JSON format ONLY:
 {
-  "lawnSqft": <number>,
-  "treeCount": <number>,
-  "bushCount": <number>,
+  "lawnSqft": <number - be conservative, typical is 2000-6000>,
+  "treeCount": <number - typically 0-10 for residential>,
+  "bushCount": <number - typically 0-20>,
   "hasPool": <boolean>,
   "hasFence": <boolean>,
-  "fenceLength": <number in linear feet>,
-  "pathwaySqft": <number in square feet>,
-  "gardenBeds": <number>,
+  "fenceLength": <number - 0 if no fence, typically 100-400 ft>,
+  "pathwaySqft": <number - typically 50-300 sq ft>,
+  "gardenBeds": <number - typically 0-5>,
   "drivewayPresent": <boolean>,
-  "confidence": <number between 0 and 1>,
-  "notes": [<array of observation strings>]
+  "confidence": <number 0-1>,
+  "notes": [<observations about THIS property>]
 }`;
 
     // Build the parts array with all images

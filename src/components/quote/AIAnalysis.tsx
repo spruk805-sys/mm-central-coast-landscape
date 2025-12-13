@@ -54,9 +54,9 @@ export default function AIAnalysis({
   const getImageUrls = () => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     return [
-      { label: "Close-up Satellite", url: `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=20&size=640x640&maptype=satellite&key=${apiKey}` },
+      { label: "Very Close Satellite", url: `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=21&size=640x640&maptype=satellite&key=${apiKey}` },
+      { label: "Close Satellite", url: `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=20&size=640x640&maptype=satellite&key=${apiKey}` },
       { label: "Medium Satellite", url: `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=19&size=640x640&maptype=satellite&key=${apiKey}` },
-      { label: "Wide Satellite", url: `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=18&size=640x640&maptype=satellite&key=${apiKey}` },
       { label: "Street View Front", url: `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${coordinates.lat},${coordinates.lng}&fov=100&pitch=10&key=${apiKey}` },
       { label: "Street View Left", url: `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${coordinates.lat},${coordinates.lng}&fov=100&heading=270&pitch=10&key=${apiKey}` },
       { label: "Street View Right", url: `https://maps.googleapis.com/maps/api/streetview?size=640x480&location=${coordinates.lat},${coordinates.lng}&fov=100&heading=90&pitch=10&key=${apiKey}` },
