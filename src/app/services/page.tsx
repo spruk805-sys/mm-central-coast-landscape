@@ -116,6 +116,7 @@ const services = [
       'Same-day service available',
     ],
     price: 'Starting at $150/load',
+    quoteLink: '/dump-quote',
   },
 ];
 
@@ -163,8 +164,8 @@ export default function ServicesPage() {
                 </ul>
                 <div className={styles.serviceFooter}>
                   <span className={styles.servicePrice}>{service.price}</span>
-                  <Link href="/quote" className={styles.serviceLink}>
-                    Get Quote
+                  <Link href={(service as { quoteLink?: string }).quoteLink || "/quote"} className={styles.serviceLink}>
+                    {(service as { quoteLink?: string }).quoteLink ? "📸 Get AI Quote" : "Get Quote"}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
                       <path d="M5 12h14M12 5l7 7-7 7" />
                     </svg>
