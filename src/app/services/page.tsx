@@ -100,6 +100,21 @@ const services = [
     ],
     price: 'Starting at $15/week',
   },
+  {
+    id: 'dump-services',
+    icon: '🚛',
+    title: 'Dump Runs & Haul-Away',
+    description: 'Get rid of yard debris, green waste, old landscaping materials, and junk with our convenient haul-away service. We load, transport, and dispose of it all responsibly.',
+    features: [
+      'Yard debris and green waste removal',
+      'Old mulch, soil, and rock disposal',
+      'Brush and branch hauling',
+      'Broken concrete and pavers',
+      'General junk and bulk item removal',
+      'Same-day service available',
+    ],
+    price: 'Starting at $150/load',
+  },
 ];
 
 export default function ServicesPage() {
