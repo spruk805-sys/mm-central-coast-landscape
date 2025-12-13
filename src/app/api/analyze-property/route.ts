@@ -48,10 +48,12 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
     const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const regridKey = process.env.REGRID_API_KEY;
 
     console.log("[AI Analysis] API keys configured:", { 
       hasGeminiKey: !!apiKey, 
       hasMapsKey: !!mapsApiKey,
+      hasRegridKey: !!regridKey,
       geminiKeyPrefix: apiKey?.substring(0, 10) + "..."
     });
 
@@ -61,6 +63,76 @@ export async function POST(request: NextRequest) {
         { error: "AI Studio API key not configured. Please add GOOGLE_AI_STUDIO_KEY to .env.local" },
         { status: 500 }
       );
+    }
+
+    // Fetch parcel boundary data from Regrid if available
+    let parcelData: {
+      sqft: number;
+      acres: number;
+      apn: string;
+      dimensions: { latFeet: number; lngFeet: number; perimeterFeet: number };
+    } | null = null;
+
+    if (regridKey) {
+      try {
+        console.log("[AI Analysis] Fetching parcel boundary from Regrid...");
+        const regridUrl = `https://app.regrid.com/api/v2/parcels/point?lat=${lat}&lon=${lng}&token=${regridKey}&return_geometry=true`;
+        
+        const regridResponse = await fetch(regridUrl, {
+          headers: { "Accept": "application/json" },
+        });
+
+        if (regridResponse.ok) {
+          const regridData = await regridResponse.json();
+          if (regridData.parcels?.features?.length > 0) {
+            const feature = regridData.parcels.features[0];
+            const props = feature.properties?.fields || feature.properties || {};
+            const geometry = feature.geometry;
+
+            // Calculate bounds
+            let bounds = { minLat: 90, maxLat: -90, minLng: 180, maxLng: -180 };
+            if (geometry?.coordinates) {
+              const coords = geometry.type === "MultiPolygon" 
+                ? geometry.coordinates.flat(2)
+                : geometry.coordinates.flat(1);
+              for (const coord of coords) {
+                if (Array.isArray(coord) && coord.length >= 2) {
+                  bounds.minLng = Math.min(bounds.minLng, coord[0]);
+                  bounds.maxLng = Math.max(bounds.maxLng, coord[0]);
+                  bounds.minLat = Math.min(bounds.minLat, coord[1]);
+                  bounds.maxLat = Math.max(bounds.maxLat, coord[1]);
+                }
+              }
+            }
+
+            // Calculate dimensions in feet
+            const latDiff = bounds.maxLat - bounds.minLat;
+            const lngDiff = bounds.maxLng - bounds.minLng;
+            const avgLat = (bounds.maxLat + bounds.minLat) / 2;
+            const latFeet = Math.round(latDiff * 364173);
+            const lngFeet = Math.round(lngDiff * 364173 * Math.cos(avgLat * Math.PI / 180));
+
+            parcelData = {
+              sqft: parseFloat(props.ll_gissqft || props.sqft || "0") || 0,
+              acres: parseFloat(props.ll_gisacre || props.acres || "0") || 0,
+              apn: props.parcelnumb || props.apn || "",
+              dimensions: {
+                latFeet,
+                lngFeet,
+                perimeterFeet: (latFeet + lngFeet) * 2,
+              },
+            };
+
+            console.log("[AI Analysis] Parcel found:", {
+              apn: parcelData.apn,
+              sqft: parcelData.sqft,
+              dimensions: `${latFeet}ft x ${lngFeet}ft`,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[AI Analysis] Regrid fetch error:", err);
+      }
     }
 
     // Fetch multiple satellite images at different zoom levels for comprehensive view
@@ -136,16 +208,32 @@ export async function POST(request: NextRequest) {
 
     // Prepare prompt for Gemini Vision with multiple perspectives
     const imageCount = 3 + streetViewImages.length + userPhotos.length;
+    
+    // Build parcel info section for prompt
+    const parcelInfo = parcelData 
+      ? `
+**VERIFIED PARCEL BOUNDARY DATA (from Regrid.com):**
+- Assessor Parcel Number (APN): ${parcelData.apn}
+- Total Lot Size: ${parcelData.sqft.toLocaleString()} sq ft (${parcelData.acres.toFixed(2)} acres)
+- Lot Dimensions: approximately ${parcelData.dimensions.latFeet}ft x ${parcelData.dimensions.lngFeet}ft
+- Estimated Perimeter: ${parcelData.dimensions.perimeterFeet}ft
+
+⚠️ USE THESE EXACT PARCEL DIMENSIONS when estimating lawn area and fence length. The lot is ${parcelData.sqft.toLocaleString()} sq ft TOTAL - lawn will be LESS than this (subtract house, driveway, patios).
+`
+      : `
+**PARCEL BOUNDARY:** Exact boundary data unavailable. Use satellite image center as reference.
+`;
+
     const analysisPrompt = `You are an expert landscaping property analyst. Analyze these ${imageCount} images of a SINGLE residential property and provide detailed estimates for landscaping services.
 
 **CRITICAL - PROPERTY BOUNDARY INSTRUCTIONS:**
 The property we are analyzing is located at: ${address || "Unknown"}
 GPS Coordinates: ${lat}, ${lng}
-
+${parcelInfo}
 ⚠️ IMPORTANT: The GPS coordinates mark the CENTER of the target property. 
-- In the CLOSE-UP satellite view (zoom 20), the TARGET PROPERTY fills most of the image - analyze ONLY this property
-- In the MEDIUM satellite view (zoom 19), the target property is in the CENTER - IGNORE surrounding properties
-- In the WIDE satellite view (zoom 18), you can see multiple properties - ONLY analyze the ONE in the CENTER
+- In the CLOSE-UP satellite view (zoom 21), the TARGET PROPERTY fills most of the image - analyze ONLY this property
+- In the MEDIUM satellite view (zoom 20), the target property is in the CENTER - IGNORE surrounding properties
+- In the WIDE satellite view (zoom 19), you can see multiple properties - ONLY analyze the ONE in the CENTER
 - The Street View images show the target property from the street - focus on THIS property only
 
 DO NOT include ANY features from neighboring properties. If you see fences, trees, or landscaping that clearly belong to adjacent lots, EXCLUDE them from your counts.
