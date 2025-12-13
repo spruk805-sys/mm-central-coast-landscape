@@ -321,98 +321,124 @@ Respond in JSON format ONLY:
   "notes": [<observations about THIS property>]
 }`;
 
-    // Build the parts array with all images
-    const imageParts: Array<{ inline_data: { mime_type: string; data: string } } | { text: string }> = [
-      { text: analysisPrompt },
-      // Close-up satellite view
-      { inline_data: { mime_type: "image/png", data: base64SatelliteClose } },
-      // Medium satellite view
-      { inline_data: { mime_type: "image/png", data: base64SatelliteMedium } },
-      // Wide satellite view
-      { inline_data: { mime_type: "image/png", data: base64SatelliteWide } },
-    ];
+    // Open AI Fallback Function
+    const callOpenAI = async (promptText: string, images: { mime: string, data: string }[]) => {
+      const openAIKey = process.env.OPENAI_API_KEY;
+      if (!openAIKey) throw new Error("OpenAI API key not configured for fallback.");
 
-    // Add all street view images
-    for (const svImage of streetViewImages) {
-      imageParts.push({
-        inline_data: { mime_type: "image/jpeg", data: svImage },
-      });
-    }
+      console.log("[AI Analysis] Falling back to OpenAI GPT-4o...");
+      
+      const content = [
+        { type: "text", text: promptText },
+        ...images.map(img => ({
+          type: "image_url",
+          image_url: { url: `data:${img.mime};base64,${img.data}` }
+        }))
+      ];
 
-    // Add user-uploaded photos if provided
-    if (userPhotos.length > 0) {
-      console.log("[AI Analysis] Adding", userPhotos.length, "user photos to analysis");
-      for (const photo of userPhotos) {
-        try {
-          const bytes = await photo.arrayBuffer();
-          const base64 = Buffer.from(bytes).toString("base64");
-          imageParts.push({
-            inline_data: { mime_type: photo.type || "image/jpeg", data: base64 },
-          });
-        } catch (err) {
-          console.error("[AI Analysis] Failed to process user photo:", err);
-        }
-      }
-    }
-
-    console.log("[AI Analysis] Calling Gemini API...");
-
-    // Call Gemini API with vision model
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`,
-      {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${openAIKey}`
         },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: imageParts,
+          model: "gpt-4o",
+          messages: [{ role: "user", content }],
+          max_tokens: 1024,
+          temperature: 0.2,
+          response_format: { type: "json_object" }
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`OpenAI API failed: ${response.status} ${err}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+    };
+
+    // Prepare images for both providers
+    const processedImages: { mime: string, data: string }[] = [
+      { mime: "image/png", data: base64SatelliteClose },
+      { mime: "image/png", data: base64SatelliteMedium },
+      { mime: "image/png", data: base64SatelliteWide },
+      ...streetViewImages.map(data => ({ mime: "image/jpeg", data })),
+    ];
+
+    // Add user photos
+    for (const photo of userPhotos) {
+      try {
+        const bytes = await photo.arrayBuffer();
+        const base64 = Buffer.from(bytes).toString("base64");
+        processedImages.push({
+          mime: photo.type || "image/jpeg",
+          data: base64
+        });
+      } catch (err) {
+        console.error("[AI Analysis] Failed to process user photo:", err);
+      }
+    }
+
+    console.log("[AI Analysis] Calling Gemini API (Primary)...");
+
+    let textResponse: string | null = null;
+    let providerUsed = "Gemini";
+
+    try {
+      // Build Gemini Parts
+      const geminiParts = [
+        { text: analysisPrompt },
+        ...processedImages.map(img => ({
+          inline_data: { mime_type: img.mime, data: img.data }
+        }))
+      ];
+
+      // Call Gemini
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: geminiParts }],
+            generationConfig: {
+              temperature: 0.2,
+              topK: 32,
+              topP: 1,
+              maxOutputTokens: 1024,
             },
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            topK: 32,
-            topP: 1,
-            maxOutputTokens: 1024,
-          },
-        }),
-      }
-    );
-
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error("[AI Analysis] Gemini API error:", geminiResponse.status, errorText);
-      
-      // Handle rate limiting with user-friendly message
-      if (geminiResponse.status === 429) {
-        return NextResponse.json(
-          { error: "AI analysis is temporarily unavailable due to high demand. Please try again in 30 seconds." },
-          { status: 429 }
-        );
-      }
-      
-      return NextResponse.json(
-        { error: `AI analysis failed (${geminiResponse.status})`, details: errorText },
-        { status: 500 }
+          }),
+        }
       );
+
+      if (!geminiResponse.ok) {
+        throw new Error(`Gemini status ${geminiResponse.status}`);
+      }
+
+      const geminiData = await geminiResponse.json();
+      textResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+    } catch (geminiError) {
+      console.error(`[AI Analysis] Gemini failed: ${geminiError}. Attempting fallback...`);
+      
+      try {
+        textResponse = await callOpenAI(analysisPrompt, processedImages);
+        providerUsed = "OpenAI GPT-4o";
+      } catch (openAIError) {
+        console.error(`[AI Analysis] OpenAI fallback failed: ${openAIError}`);
+        // If both fail, throw the original error or a combined one
+        throw new Error(`Both AI providers failed. Gemini: ${geminiError}, OpenAI: ${openAIError}`);
+      }
     }
 
-    console.log("[AI Analysis] Gemini response received");
-
-    const geminiData = await geminiResponse.json();
-    
-    // Extract the text response
-    const textResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-    
     if (!textResponse) {
-      console.error("No response from Gemini:", geminiData);
-      return NextResponse.json(
-        { error: "No analysis returned from AI" },
-        { status: 500 }
-      );
+       throw new Error("No analysis returned from any provider");
     }
+
+    console.log(`[AI Analysis] Success! Provider: ${providerUsed}`);
 
     // Parse the JSON response
     let analysis: PropertyAnalysis;
@@ -424,8 +450,9 @@ Respond in JSON format ONLY:
         .trim();
       
       analysis = JSON.parse(cleanedResponse);
+      analysis.notes = [...(analysis.notes || []), `Analysis verified by ${providerUsed}`];
     } catch {
-      console.error("Failed to parse Gemini response:", textResponse);
+      console.error("Failed to parse AI response:", textResponse);
       // Return a default analysis if parsing fails
       analysis = {
         lawnSqft: 2500,
@@ -438,7 +465,7 @@ Respond in JSON format ONLY:
         gardenBeds: 2,
         drivewayPresent: true,
         confidence: 0.5,
-        notes: ["Unable to parse AI response, using estimated values"],
+        notes: ["Unable to parse AI response", `Provider: ${providerUsed}`],
       };
     }
 
@@ -459,6 +486,7 @@ Respond in JSON format ONLY:
 
     return NextResponse.json({
       success: true,
+      provider: providerUsed,
       analysis: sanitizedAnalysis,
       imageUrl: satelliteCloseUrl,
       parcel: parcelData ? {
