@@ -238,6 +238,163 @@
   line-height: 1.2;
 }
 
+/* Feature Mask Overlays */
+.featureMasks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.maskLawn {
+  position: absolute;
+  top: 15%;
+  left: 10%;
+  right: 10%;
+  bottom: 30%;
+  background: rgba(34, 197, 94, 0.35);
+  border-radius: 20px;
+  animation: maskPulse 3s ease-in-out infinite;
+}
+
+.maskTrees {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.treeMarker {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: #15803d;
+  border-radius: 50%;
+  border: 2px solid #166534;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: treePop 0.5s ease-out forwards;
+}
+
+.treeMarker::after {
+  content: '🌳';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+}
+
+.maskFence {
+  position: absolute;
+  top: 8%;
+  left: 8%;
+  right: 8%;
+  bottom: 25%;
+  border: 4px dashed #f59e0b;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.maskPathway {
+  position: absolute;
+  bottom: 15%;
+  left: 35%;
+  width: 30%;
+  height: 20%;
+  background: rgba(168, 162, 158, 0.6);
+  border-radius: 8px;
+  transform: skewX(-10deg);
+}
+
+.maskPool {
+  position: absolute;
+  bottom: 20%;
+  right: 15%;
+  width: 18%;
+  height: 12%;
+  background: rgba(59, 130, 246, 0.6);
+  border-radius: 40% 60% 40% 60%;
+  border: 3px solid rgba(96, 165, 250, 0.8);
+  animation: poolWave 2s ease-in-out infinite;
+}
+
+@keyframes maskPulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes treePop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes poolWave {
+  0%, 100% { border-radius: 40% 60% 40% 60%; }
+  50% { border-radius: 60% 40% 60% 40%; }
+}
+
+/* Mask Legend */
+.maskLegend {
+  position: absolute;
+  bottom: 50px;
+  left: var(--space-3);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  z-index: 15;
+}
+
+.legendTitle {
+  color: white;
+  font-size: 10px;
+  font-weight: var(--font-bold);
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.legendItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.legendItem:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.legendActive {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.legendColor {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
 /* Values Grid */
 .valuesGrid {
   display: grid;

@@ -35,9 +35,16 @@ export default function AIAnalysis({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<PropertyAnalysis | null>(null);
-  const [satelliteUrl, setSatelliteUrl] = useState<string | null>(null);
+  const [, setSatelliteUrl] = useState<string | null>(null);
   const [editedAnalysis, setEditedAnalysis] = useState<PropertyAnalysis | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showMasks, setShowMasks] = useState({
+    lawn: true,
+    trees: true,
+    fence: true,
+    pathway: true,
+    pool: true,
+  });
 
   // Generate all image URLs for the carousel
   const getImageUrls = () => {
@@ -239,6 +246,104 @@ export default function AIAnalysis({
             height={375}
             className={styles.satelliteImage}
           />
+          
+          {/* Visual Feature Masks - Only show for satellite views (index 0-2) */}
+          {activeImageIndex < 3 && (
+            <div className={styles.featureMasks}>
+              {/* Lawn Area Mask */}
+              {showMasks.lawn && (editedAnalysis?.lawnSqft || 0) > 0 && (
+                <div 
+                  className={styles.maskLawn}
+                  title={`Lawn: ~${editedAnalysis?.lawnSqft?.toLocaleString()} sq ft`}
+                />
+              )}
+              
+              {/* Trees Mask - scatter dots */}
+              {showMasks.trees && (editedAnalysis?.treeCount || 0) > 0 && (
+                <div className={styles.maskTrees}>
+                  {Array.from({ length: Math.min(editedAnalysis?.treeCount || 0, 12) }).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={styles.treeMarker}
+                      style={{
+                        left: `${15 + (i % 4) * 20 + Math.random() * 10}%`,
+                        top: `${20 + Math.floor(i / 4) * 25 + Math.random() * 10}%`,
+                      }}
+                      title="Tree"
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {/* Fence Mask - border lines */}
+              {showMasks.fence && (editedAnalysis?.fenceLength || 0) > 0 && (
+                <div 
+                  className={styles.maskFence}
+                  title={`Fence: ~${editedAnalysis?.fenceLength} linear ft`}
+                />
+              )}
+              
+              {/* Pathway Mask */}
+              {showMasks.pathway && (editedAnalysis?.pathwaySqft || 0) > 0 && (
+                <div 
+                  className={styles.maskPathway}
+                  title={`Pathway: ~${editedAnalysis?.pathwaySqft} sq ft`}
+                />
+              )}
+              
+              {/* Pool Mask */}
+              {showMasks.pool && editedAnalysis?.hasPool && (
+                <div 
+                  className={styles.maskPool}
+                  title="Pool/Hot Tub Detected"
+                />
+              )}
+            </div>
+          )}
+          
+          {/* Mask Legend & Toggles */}
+          {activeImageIndex < 3 && (
+            <div className={styles.maskLegend}>
+              <div className={styles.legendTitle}>Feature Masks:</div>
+              <div className={styles.legendItems}>
+                <button 
+                  className={`${styles.legendItem} ${showMasks.lawn ? styles.legendActive : ''}`}
+                  onClick={() => setShowMasks(m => ({ ...m, lawn: !m.lawn }))}
+                >
+                  <span className={styles.legendColor} style={{ background: 'rgba(34, 197, 94, 0.5)' }} />
+                  Lawn
+                </button>
+                <button 
+                  className={`${styles.legendItem} ${showMasks.trees ? styles.legendActive : ''}`}
+                  onClick={() => setShowMasks(m => ({ ...m, trees: !m.trees }))}
+                >
+                  <span className={styles.legendColor} style={{ background: '#15803d' }} />
+                  Trees
+                </button>
+                <button 
+                  className={`${styles.legendItem} ${showMasks.fence ? styles.legendActive : ''}`}
+                  onClick={() => setShowMasks(m => ({ ...m, fence: !m.fence }))}
+                >
+                  <span className={styles.legendColor} style={{ background: '#f59e0b' }} />
+                  Fence
+                </button>
+                <button 
+                  className={`${styles.legendItem} ${showMasks.pathway ? styles.legendActive : ''}`}
+                  onClick={() => setShowMasks(m => ({ ...m, pathway: !m.pathway }))}
+                >
+                  <span className={styles.legendColor} style={{ background: 'rgba(168, 162, 158, 0.7)' }} />
+                  Path
+                </button>
+                <button 
+                  className={`${styles.legendItem} ${showMasks.pool ? styles.legendActive : ''}`}
+                  onClick={() => setShowMasks(m => ({ ...m, pool: !m.pool }))}
+                >
+                  <span className={styles.legendColor} style={{ background: 'rgba(59, 130, 246, 0.6)' }} />
+                  Pool
+                </button>
+              </div>
+            </div>
+          )}
           
           {/* AI Results Overlay */}
           <div className={styles.resultsOverlay}>
