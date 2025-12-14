@@ -113,12 +113,18 @@ export class SAMAgent implements HaulingAgent {
       
       // Color mapping for different feature types
       const colorMap: Record<string, string> = {
-        'lawn grass': 'rgba(34, 197, 94, 0.4)',
-        'tree': 'rgba(21, 128, 61, 0.5)',
-        'swimming pool': 'rgba(59, 130, 246, 0.5)',
-        'fence': 'rgba(168, 162, 158, 0.5)',
-        'driveway': 'rgba(156, 163, 175, 0.4)',
-        'garden bed': 'rgba(139, 69, 19, 0.4)',
+        'lawn grass': 'rgba(34, 197, 94, 0.4)',      // Green
+        'tree': 'rgba(21, 128, 61, 0.5)',             // Dark green
+        'bush shrub': 'rgba(74, 222, 128, 0.4)',     // Light green
+        'swimming pool': 'rgba(59, 130, 246, 0.5)',  // Blue
+        'fence': 'rgba(168, 162, 158, 0.5)',         // Gray
+        'driveway': 'rgba(156, 163, 175, 0.4)',      // Slate
+        'patio deck': 'rgba(194, 65, 12, 0.4)',      // Orange/brown
+        'garden bed': 'rgba(139, 69, 19, 0.4)',      // Brown
+        'pathway walkway': 'rgba(107, 114, 128, 0.4)', // Gray
+        'shed': 'rgba(245, 158, 11, 0.5)',           // Amber
+        'roof house': 'rgba(127, 29, 29, 0.4)',      // Dark red
+        'solar panel': 'rgba(30, 58, 138, 0.6)',     // Dark blue - for cleaning service!
       };
       
       // SAM 3 returns prompt_results array with polygon masks
