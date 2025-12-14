@@ -1,14 +1,28 @@
 
 import { PropertyAnalysis } from "@/types/property";
 import { getSAMAgent } from "./site-manager/sam-agent";
+import { getBoundaryAgent, ParcelPolygon } from "./site-manager/boundary-agent";
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
+
+// Parcel data from Regrid API
+interface ParcelData {
+  polygon?: ParcelPolygon;
+  apn?: string;
+  sqft?: number;
+  acres?: number;
+  dimensions?: {
+    latFeet?: number;
+    lngFeet?: number;
+    perimeterFeet?: number;
+  };
+}
 
 export interface AIAnalysisConfig {
   address: string;
   lat: number;
   lng: number;
-  parcelData: any;
+  parcelData: ParcelData | null;
   satelliteImages: { mime: string; data: string; label: string }[];
   streetViewImages: { mime: string; data: string; label: string }[];
   userPhotos: { mime: string; data: string; label: string }[]; // Base64 strings
@@ -151,13 +165,13 @@ export const runConsensusAnalysis = async (config: AIAnalysisConfig): Promise<{ 
   // Construct Prompt
   const allImages = [...config.satelliteImages, ...config.streetViewImages, ...config.userPhotos];
   
-  const parcelInfo = config.parcelData 
+  const parcelInfo = config.parcelData && config.parcelData.sqft
     ? `
 **VERIFIED PARCEL BOUNDARY DATA (from Regrid.com):**
-- APN: ${config.parcelData.apn}
-- Lot Size: ${config.parcelData.sqft.toLocaleString()} sq ft (${config.parcelData.acres.toFixed(2)} acres)
-- Dimensions: ~${config.parcelData.dimensions.latFeet}ft x ${config.parcelData.dimensions.lngFeet}ft
-- Perimeter: ${config.parcelData.dimensions.perimeterFeet}ft
+- APN: ${config.parcelData.apn || 'N/A'}
+- Lot Size: ${config.parcelData.sqft?.toLocaleString() || 'Unknown'} sq ft (${config.parcelData.acres?.toFixed(2) || '?'} acres)
+- Dimensions: ~${config.parcelData.dimensions?.latFeet || '?'}ft x ${config.parcelData.dimensions?.lngFeet || '?'}ft
+- Perimeter: ${config.parcelData.dimensions?.perimeterFeet || '?'}ft
 ⚠️ USE THESE EXACT DIMENSIONS. Lawn < Lot Size.
 `
     : `**PARCEL BOUNDARY:** No exact data. Estimate from visual landmarks.`;
@@ -302,6 +316,25 @@ ${parcelInfo}
   } catch (samError) {
     console.error('[Consensus] SAM error (non-fatal):', samError);
     finalAnalysis.notes.push('[SAM] Segmentation skipped - API error');
+  }
+
+  // Apply boundary enforcement to filter features outside property
+  try {
+    const boundaryAgent = getBoundaryAgent();
+    const parcelPolygon = config.parcelData?.polygon as import('./site-manager/boundary-agent').ParcelPolygon | undefined;
+    
+    finalAnalysis = boundaryAgent.enforcePropertyBoundary(finalAnalysis, {
+      parcelPolygon,
+      centerLat: config.lat,
+      centerLng: config.lng,
+      zoom: 21, // Default to highest zoom (image1)
+    });
+    
+    const stats = boundaryAgent.getStats();
+    console.log(`[Consensus] Boundary enforcement: kept ${stats.featuresInBoundary}/${stats.totalFeatures} features`);
+  } catch (boundaryError) {
+    console.error('[Consensus] Boundary error (non-fatal):', boundaryError);
+    finalAnalysis.notes.push('[Boundary] Enforcement skipped - error');
   }
 
   return { provider: providerUsed, analysis: finalAnalysis };
