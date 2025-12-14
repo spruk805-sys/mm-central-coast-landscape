@@ -36,25 +36,6 @@ export default function AIAnalysis({
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  
-  // SAM 3 Segmentation masks
-  const [samMasks, setSamMasks] = useState<{
-    type: string;
-    mask: string;
-    area: number;
-    percentage: number;
-    bounds: { x: number; y: number; w: number; h: number };
-  }[]>([]);
-  const [isGeneratingMasks, setIsGeneratingMasks] = useState(false);
-  const [samEnabled, setSamEnabled] = useState(false);
-  
-  // Check if SAM is available on mount
-  useState(() => {
-    fetch('/api/segment')
-      .then(res => res.json())
-      .then(data => setSamEnabled(data.enabled))
-      .catch(() => setSamEnabled(false));
-  });
 
   // Generate all image URLs for the carousel
   const getImageUrls = () => {
@@ -207,40 +188,6 @@ export default function AIAnalysis({
     }
     
     return [];
-  };
-
-  // Generate SAM 3 segmentation masks
-  const generateSAMMasks = async () => {
-    if (!samEnabled || activeImageIndex >= 3) return; // Only for satellite images
-    
-    setIsGeneratingMasks(true);
-    try {
-      // Fetch the current satellite image
-      const imageUrl = imageUrls[activeImageIndex].url;
-      const res = await fetch(imageUrl);
-      const blob = await res.blob();
-      
-      // Create FormData with image and prompts
-      const formData = new FormData();
-      formData.append('image', blob, 'satellite.jpg');
-      formData.append('prompts', JSON.stringify(['lawn grass', 'tree', 'swimming pool', 'fence']));
-      
-      const samRes = await fetch('/api/segment', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await samRes.json();
-      
-      if (data.success && data.masks) {
-        setSamMasks(data.masks);
-        console.log('[SAM] Generated', data.masks.length, 'masks');
-      }
-    } catch (error) {
-      console.error('[SAM] Mask generation failed:', error);
-    } finally {
-      setIsGeneratingMasks(false);
-    }
   };
 
   // Initial state - show analyze button
@@ -520,6 +467,27 @@ export default function AIAnalysis({
                   title={`Fence: ~${editedAnalysis?.fenceLength} linear ft`}
                 />
               )}
+              
+              {/* SAM Segmentation Mask Overlays (only on first satellite) */}
+              {activeImageIndex === 0 && editedAnalysis?.samMasks && editedAnalysis.samMasks.map((mask, i) => (
+                mask.mask && (
+                  <img
+                    key={`sam-mask-${i}`}
+                    src={`data:image/png;base64,${mask.mask}`}
+                    alt={`SAM ${mask.type} mask`}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0.5,
+                      pointerEvents: 'none',
+                      mixBlendMode: 'multiply',
+                    }}
+                  />
+                )
+              ))}
             </div>
           )}
           
@@ -563,28 +531,12 @@ export default function AIAnalysis({
                   <span className={styles.legendColor} style={{ background: 'rgba(59, 130, 246, 0.6)' }} />
                   Pool
                 </button>
-                
-                {/* SAM 3 Generate Button */}
-                {samEnabled && activeImageIndex < 3 && (
-                  <button 
-                    className={`${styles.legendItem} ${styles.samButton}`}
-                    onClick={generateSAMMasks}
-                    disabled={isGeneratingMasks}
-                    style={{ 
-                      background: isGeneratingMasks ? '#6366f1' : 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                      color: 'white',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    {isGeneratingMasks ? '⏳ Generating...' : '✨ SAM Masks'}
-                  </button>
-                )}
               </div>
               
-              {/* SAM Mask Count */}
-              {samMasks.length > 0 && (
-                <div style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.25rem' }}>
-                  ✅ {samMasks.length} SAM masks generated
+              {/* SAM Mask Count (from consensus analysis) */}
+              {(editedAnalysis?.samMasks?.length || 0) > 0 && (
+                <div style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  ✨ {editedAnalysis?.samMasks?.length} SAM masks generated
                 </div>
               )}
             </div>
