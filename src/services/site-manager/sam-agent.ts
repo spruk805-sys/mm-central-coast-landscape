@@ -64,13 +64,14 @@ export class SAMAgent implements HaulingAgent {
   }
   
   /**
-   * Segment an image using text prompts via Roboflow SAM API
-   * Note: Roboflow SAM requires specific endpoint format
+   * Segment an image using text prompts via Roboflow SAM 3 API
+   * Endpoint: https://serverless.roboflow.com/sam3/concept_segment
    */
   async segmentWithText(
     imageBase64: string,
     prompts: string[],
-    mimeType = 'image/jpeg'
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _mimeType = 'image/jpeg'
   ): Promise<SegmentationResult[]> {
     if (!this.apiKey) {
       console.warn('[SAMAgent] No API key - returning empty results');
@@ -81,74 +82,66 @@ export class SAMAgent implements HaulingAgent {
     const results: SegmentationResult[] = [];
     
     try {
-      // Roboflow SAM2 endpoint with api_key as query param
-      // Using the segment_image endpoint for SAM
-      const endpoint = `https://infer.roboflow.com/sam2/segment_image?api_key=${this.apiKey}`;
+      // SAM 3 Concept Segmentation endpoint
+      const endpoint = `https://serverless.roboflow.com/sam3/concept_segment?api_key=${this.apiKey}`;
       
-      for (const prompt of prompts) {
-        console.log(`[SAMAgent] Segmenting: "${prompt}"`);
-        
-        try {
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              image: {
-                type: 'base64',
-                value: imageBase64,
-              },
-              text_prompt: prompt,
-              multimask_output: false,
-            }),
-          });
+      // Build prompts array for SAM 3
+      const sam3Prompts = prompts.map(text => ({ text }));
+      
+      console.log(`[SAMAgent] Calling SAM 3 with prompts:`, prompts);
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          format: 'mask', // Request mask format
+          image: {
+            type: 'base64',
+            value: imageBase64,
+          },
+          prompts: sam3Prompts,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[SAMAgent] SAM 3 API error:`, response.status, errorText);
+        return [];
+      }
+      
+      const data = await response.json();
+      console.log(`[SAMAgent] SAM 3 response keys:`, Object.keys(data));
+      
+      // SAM 3 returns prompt_results array
+      if (data.prompt_results && Array.isArray(data.prompt_results)) {
+        for (let i = 0; i < data.prompt_results.length; i++) {
+          const promptResult = data.prompt_results[i];
+          const promptText = prompts[i] || 'unknown';
           
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[SAMAgent] API error for "${prompt}":`, response.status, errorText);
-            continue;
-          }
-          
-          const data = await response.json();
-          console.log(`[SAMAgent] Response for "${prompt}":`, JSON.stringify(data).substring(0, 200));
-          
-          // Handle various response formats
-          if (data.mask) {
-            results.push({
-              type: prompt,
-              mask: data.mask,
-              maskUrl: data.mask_url,
-              area: data.area || 0,
-              percentage: data.percentage || 0,
-              confidence: data.confidence || 0.8,
-              bounds: data.bounds || { x: 0, y: 0, w: 100, h: 100 },
-            });
-          } else if (data.masks && data.masks.length > 0) {
-            for (const mask of data.masks) {
-              results.push({
-                type: prompt,
-                mask: mask.mask || mask.mask_base64 || '',
-                maskUrl: mask.mask_url,
-                area: mask.area || 0,
-                percentage: mask.percentage || 0,
-                confidence: mask.confidence || 0.8,
-                bounds: mask.bounds || { x: 0, y: 0, w: 100, h: 100 },
-              });
+          if (promptResult.predictions && Array.isArray(promptResult.predictions)) {
+            for (const pred of promptResult.predictions) {
+              // Handle mask data
+              if (pred.mask || pred.masks) {
+                const maskData = pred.mask || (pred.masks && pred.masks[0]);
+                results.push({
+                  type: promptText,
+                  mask: typeof maskData === 'string' ? maskData : JSON.stringify(maskData),
+                  maskUrl: pred.mask_url,
+                  area: pred.area || 0,
+                  percentage: pred.percentage || 0,
+                  confidence: pred.confidence || 0.8,
+                  bounds: pred.bbox ? {
+                    x: pred.bbox.x || 0,
+                    y: pred.bbox.y || 0,
+                    w: pred.bbox.width || 100,
+                    h: pred.bbox.height || 100,
+                  } : { x: 0, y: 0, w: 100, h: 100 },
+                });
+              }
             }
-          } else if (data.segmentation) {
-            // Alternative format
-            results.push({
-              type: prompt,
-              mask: data.segmentation.mask || '',
-              area: data.segmentation.area || 0,
-              percentage: data.segmentation.percentage || 0,
-              confidence: data.segmentation.confidence || 0.8,
-              bounds: data.segmentation.bounds || { x: 0, y: 0, w: 100, h: 100 },
-            });
           }
-        } catch (promptError) {
-          console.error(`[SAMAgent] Error for prompt "${prompt}":`, promptError);
         }
       }
       
