@@ -37,13 +37,28 @@ const parseAIResponse = (textResponse: string, providerName: string): PropertyAn
       notes: Array.isArray(json.notes) 
         ? [...observations, ...json.notes.map((n: string) => `[${providerName}] ${n}`)]
         : [...observations],
-      locations: Array.isArray(json.locations) ? json.locations.map((l: any) => ({
-        type: l.type,
-        y: (l.box_2d?.[0] || l.y || 0) / (l.box_2d ? 10 : 1), // Handle 0-1000 scale if box_2d, else assume 0-100
-        x: (l.box_2d?.[1] || l.x || 0) / (l.box_2d ? 10 : 1),
-        h: l.box_2d ? ((l.box_2d[2] - l.box_2d[0]) / 10) : (l.h || 5),
-        w: l.box_2d ? ((l.box_2d[3] - l.box_2d[1]) / 10) : (l.w || 5)
-      })) : []
+      locations: Array.isArray(json.locations) ? json.locations.map((loc: any) => {
+        // Gemini box_2d format: [y_min, x_min, y_max, x_max] on 0-1000 scale
+        // We need to convert to percentages (0-100)
+        if (loc.box_2d && Array.isArray(loc.box_2d) && loc.box_2d.length === 4) {
+          const [yMin, xMin, yMax, xMax] = loc.box_2d;
+          return {
+            type: loc.type || 'unknown',
+            x: xMin / 10,  // Convert 0-1000 to 0-100 percentage
+            y: yMin / 10,
+            w: Math.max(2, (xMax - xMin) / 10), // Width as percentage, min 2%
+            h: Math.max(2, (yMax - yMin) / 10), // Height as percentage, min 2%
+          };
+        }
+        // Fallback for direct x,y coordinates (assume already 0-100)
+        return {
+          type: loc.type || 'unknown',
+          x: loc.x || 50,
+          y: loc.y || 50,
+          w: loc.w || 5,
+          h: loc.h || 5,
+        };
+      }) : []
     };
   } catch (e) {
     throw new Error(`Failed to parse ${providerName} response: ${textResponse.substring(0, 100)}...`);
