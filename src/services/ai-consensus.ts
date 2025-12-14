@@ -264,29 +264,44 @@ ${parcelInfo}
     finalAnalysis.notes.push(`Single Source: ${providerUsed}`);
   }
 
-  // Generate SAM segmentation masks (runs after AI analysis)
+  // Generate SAM segmentation masks for all 3 satellite images
   try {
     const samAgent = getSAMAgent();
     const samStatus = samAgent.getStatus();
     
-    if (samStatus.healthy && config.satelliteImages.length > 0) {
-      console.log('[Consensus] Generating SAM masks...');
-      const firstSatellite = config.satelliteImages[0];
-      const samMasks = await samAgent.segmentWithText(
-        firstSatellite.data,
-        ['lawn grass', 'tree', 'swimming pool', 'fence'],
-        firstSatellite.mime
+    if (samStatus.healthy && config.satelliteImages.length >= 3) {
+      console.log('[Consensus] Generating SAM masks for all satellite images...');
+      const samPrompts = ['lawn grass', 'tree', 'swimming pool', 'fence'];
+      
+      // Process all 3 satellite images in parallel
+      const samResults = await Promise.all(
+        config.satelliteImages.slice(0, 3).map(async (img, idx) => {
+          console.log(`[Consensus] SAM processing image ${idx + 1}...`);
+          const masks = await samAgent.segmentWithText(img.data, samPrompts, img.mime);
+          return { imageKey: `image${idx + 1}` as 'image1' | 'image2' | 'image3', masks };
+        })
       );
       
-      if (samMasks.length > 0) {
-        finalAnalysis.samMasks = samMasks;
-        finalAnalysis.notes.push(`[SAM] Generated ${samMasks.length} segmentation masks`);
-        console.log(`[Consensus] SAM generated ${samMasks.length} masks`);
+      // Build samMasksByImage structure
+      const samMasksByImage: PropertyAnalysis['samMasksByImage'] = {};
+      let totalMasks = 0;
+      
+      for (const result of samResults) {
+        if (result.masks.length > 0) {
+          samMasksByImage[result.imageKey] = result.masks;
+          totalMasks += result.masks.length;
+        }
+      }
+      
+      if (totalMasks > 0) {
+        finalAnalysis.samMasksByImage = samMasksByImage;
+        finalAnalysis.notes.push(`[SAM] Generated ${totalMasks} masks across ${Object.keys(samMasksByImage).length} images`);
+        console.log(`[Consensus] SAM generated ${totalMasks} total masks`);
       }
     }
   } catch (samError) {
     console.error('[Consensus] SAM error (non-fatal):', samError);
-    finalAnalysis.notes.push('[SAM] Segmentation skipped - API unavailable');
+    finalAnalysis.notes.push('[SAM] Segmentation skipped - API error');
   }
 
   return { provider: providerUsed, analysis: finalAnalysis };

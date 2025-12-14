@@ -468,33 +468,39 @@ export default function AIAnalysis({
                 />
               )}
               
-              {/* SAM 3 Segmentation Polygon Overlays (only on first satellite) */}
-              {activeImageIndex === 0 && editedAnalysis?.samMasks && editedAnalysis.samMasks.length > 0 && (
-                <svg
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    pointerEvents: 'none',
-                  }}
-                  viewBox="0 0 640 640"
-                  preserveAspectRatio="none"
-                >
-                  {editedAnalysis.samMasks.map((mask, i) => (
-                    mask.polygon && mask.polygon.length > 2 && (
-                      <polygon
-                        key={`sam-mask-${i}`}
-                        points={mask.polygon.map(p => `${p[0]},${p[1]}`).join(' ')}
-                        fill={mask.color || 'rgba(100, 100, 100, 0.3)'}
-                        stroke={mask.color?.replace('0.4', '0.8').replace('0.5', '0.9') || 'rgba(100, 100, 100, 0.7)'}
-                        strokeWidth="2"
-                      />
-                    )
-                  ))}
-                </svg>
-              )}
+              {/* SAM 3 Segmentation Polygon Overlays (for all satellite images) */}
+              {activeImageIndex < 3 && (() => {
+                const imageKey = `image${activeImageIndex + 1}` as 'image1' | 'image2' | 'image3';
+                const masks = editedAnalysis?.samMasksByImage?.[imageKey];
+                if (!masks || masks.length === 0) return null;
+                
+                return (
+                  <svg
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      pointerEvents: 'none',
+                    }}
+                    viewBox="0 0 640 640"
+                    preserveAspectRatio="none"
+                  >
+                    {masks.map((mask: { polygon: number[][]; color?: string }, i: number) => (
+                      mask.polygon && mask.polygon.length > 2 && (
+                        <polygon
+                          key={`sam-mask-${i}`}
+                          points={mask.polygon.map((p: number[]) => `${p[0]},${p[1]}`).join(' ')}
+                          fill={mask.color || 'rgba(100, 100, 100, 0.3)'}
+                          stroke={mask.color?.replace('0.4', '0.8').replace('0.5', '0.9') || 'rgba(100, 100, 100, 0.7)'}
+                          strokeWidth="2"
+                        />
+                      )
+                    ))}
+                  </svg>
+                );
+              })()}
             </div>
           )}
           
@@ -541,10 +547,18 @@ export default function AIAnalysis({
               </div>
               
               {/* SAM Mask Count (from consensus analysis) */}
-              {(editedAnalysis?.samMasks?.length || 0) > 0 && (
-                <div style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  ✨ {editedAnalysis?.samMasks?.length} SAM masks generated
-                </div>
+              {editedAnalysis?.samMasksByImage && (
+                (() => {
+                  const totalMasks = Object.values(editedAnalysis.samMasksByImage)
+                    .filter((arr): arr is NonNullable<typeof arr> => !!arr)
+                    .reduce((sum, arr) => sum + arr.length, 0);
+                  if (totalMasks === 0) return null;
+                  return (
+                    <div style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      ✨ {totalMasks} SAM masks generated
+                    </div>
+                  );
+                })()
               )}
             </div>
           )}

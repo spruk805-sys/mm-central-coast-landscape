@@ -25,10 +25,24 @@ export interface PropertyAnalysis {
     image2?: FeatureLocation[];
     image3?: FeatureLocation[];
   };
-  samMasks?: {
-    type: string;
-    polygon: number[][]; // Array of [x, y] points for SVG path
-    confidence: number;
-    color?: string; // Color for this mask type
-  }[];
+  samMasksByImage?: {
+    image1?: {
+      type: string;
+      polygon: number[][];
+      confidence: number;
+      color?: string;
+    }[];
+    image2?: {
+      type: string;
+      polygon: number[][];
+      confidence: number;
+      color?: string;
+    }[];
+    image3?: {
+      type: string;
+      polygon: number[][];
+      confidence: number;
+      color?: string;
+    }[];
+  };
 }
