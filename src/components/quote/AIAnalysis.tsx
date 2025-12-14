@@ -386,123 +386,143 @@ export default function AIAnalysis({
             className={styles.satelliteImage}
           />
           
-          {/* Visual Feature Masks - Show on satellite views using per-image coordinates */}
-          {activeImageIndex < 3 && (
-            <div className={styles.featureMasks}>
-              {/* Lawn Area Mask - Generic Overlay for now (Segmentation requires SAM) */}
-              {showMasks.lawn && (editedAnalysis?.lawnSqft || 0) > 0 && (
-                <div 
-                  className={styles.maskLawn}
-                  title={`Lawn: ~${editedAnalysis?.lawnSqft?.toLocaleString()} sq ft`}
-                />
-              )}
-              
-              {/* Trees Markers - Using per-image locations */}
-              {showMasks.trees && (
-                <div className={styles.maskTrees}>
-                  {getLocationsForImage(activeImageIndex).filter(l => l.type === 'tree').map((l, i) => (
-                    <div 
-                      key={`tree-${i}`} 
-                      className={styles.treeMarker}
-                      style={{
-                        left: `${l.x}%`,
-                        top: `${l.y}%`,
-                        width: l.w ? `${l.w}%` : undefined,
-                        height: l.h ? `${l.h}%` : undefined,
-                      }}
-                      title="Tree (AI Detected)"
-                    />
-                  ))}
-                  
-                  {/* Bush Markers */}
-                  {getLocationsForImage(activeImageIndex).filter(l => l.type === 'bush').map((l, i) => (
-                    <div 
-                      key={`bush-${i}`} 
-                      className={styles.treeMarker}
-                      style={{
-                        left: `${l.x}%`,
-                        top: `${l.y}%`,
-                        width: l.w ? `${l.w}%` : '2%',
-                        height: l.h ? `${l.h}%` : '2%',
-                        backgroundColor: '#86efac', // Light green for bushes
-                        borderRadius: '50%'
-                      }}
-                      title="Bush (AI Detected)"
-                    />
-                  ))}
-
-                  {/* Fallback only if count > 0 but NO locations found (legacy/failure) */}
-                  {(getLocationsForImage(activeImageIndex).filter(l => l.type === 'tree').length === 0) && (editedAnalysis?.treeCount || 0) > 0 && (
-                     Array.from({ length: Math.min(editedAnalysis?.treeCount || 0, 5) }).map((_, i) => (
-                        <div key={`fallback-${i}`} className={styles.treeMarker} style={{ left: '50%', top: '50%', opacity: 0.5 }} title="Tree (Location Unknown)" />
-                     ))
-                  )}
-                </div>
-              )}
-
-              {/* Pool Markers - Using per-image locations */}
-              {showMasks.pool && (
-                 <div className={styles.maskPoolContainer}>
-                    {getLocationsForImage(activeImageIndex).filter(l => l.type === 'pool').map((l, i) => (
-                      <div 
-                        key={`pool-${i}`}
-                        className={styles.maskPool} // Reusing pool style, assuming absolute positioning support
-                        style={{
-                          left: `${l.x}%`,
-                          top: `${l.y}%`,
-                          width: `${l.w || 10}%`,
-                          height: `${l.h || 10}%`,
-                          position: 'absolute' 
-                        }}
-                        title="Pool Detected"
-                      />
-                    ))}
-                 </div>
-              )}
-              
-              {/* Fence Mask - Still generic unless locations found */}
-              {showMasks.fence && (editedAnalysis?.fenceLength || 0) > 0 && (
-                <div 
-                  className={styles.maskFence}
-                  title={`Fence: ~${editedAnalysis?.fenceLength} linear ft`}
-                />
-              )}
-              
-              {/* SAM 3 Segmentation Polygon Overlays (for all satellite images) */}
+              {/* Visual Feature Masks - Show on satellite views using per-image coordinates */}
               {activeImageIndex < 3 && (() => {
                 const imageKey = `image${activeImageIndex + 1}` as 'image1' | 'image2' | 'image3';
-                const masks = editedAnalysis?.samMasksByImage?.[imageKey];
-                if (!masks || masks.length === 0) return null;
-                
+                const samMasks = editedAnalysis?.samMasksByImage?.[imageKey];
+                const hasSAM = samMasks && samMasks.length > 0;
+
+                // Helper to check if a SAM mask type should be shown based on toggles
+                const shouldShowSAMMask = (type: string) => {
+                  if (type.includes('tree') || type.includes('bush')) return showMasks.trees;
+                  if (type.includes('lawn')) return showMasks.lawn;
+                  if (type.includes('fence')) return showMasks.fence;
+                  if (type.includes('pool')) return showMasks.pool;
+                  if (type.includes('path') || type.includes('driveway') || type.includes('patio')) return showMasks.pathway;
+                  // All other types (solar, shed, etc) default to true or map to closest category
+                  return true;
+                };
+
                 return (
-                  <svg
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      pointerEvents: 'none',
-                    }}
-                    viewBox="0 0 640 640"
-                    preserveAspectRatio="none"
-                  >
-                    {masks.map((mask: { polygon: number[][]; color?: string }, i: number) => (
-                      mask.polygon && mask.polygon.length > 2 && (
-                        <polygon
-                          key={`sam-mask-${i}`}
-                          points={mask.polygon.map((p: number[]) => `${p[0]},${p[1]}`).join(' ')}
-                          fill={mask.color || 'rgba(100, 100, 100, 0.3)'}
-                          stroke={mask.color?.replace('0.4', '0.8').replace('0.5', '0.9') || 'rgba(100, 100, 100, 0.7)'}
-                          strokeWidth="2"
-                        />
-                      )
-                    ))}
-                  </svg>
+                  <div className={styles.featureMasks}>
+                    {/* --- LEGACY MARKERS (Fallback Only) --- */}
+                    {/* Only show these if SAM data is MISSING for this image */}
+                    
+                    {!hasSAM && (
+                      <>
+                        {/* Lawn Area Mask - Generic Overlay */}
+                        {showMasks.lawn && (editedAnalysis?.lawnSqft || 0) > 0 && (
+                          <div 
+                            className={styles.maskLawn}
+                            title={`Lawn: ~${editedAnalysis?.lawnSqft?.toLocaleString()} sq ft`}
+                          />
+                        )}
+                        
+                        {/* Trees Markers */}
+                        {showMasks.trees && (
+                          <div className={styles.maskTrees}>
+                            {getLocationsForImage(activeImageIndex).filter(l => l.type === 'tree').map((l, i) => (
+                              <div 
+                                key={`tree-${i}`} 
+                                className={styles.treeMarker}
+                                style={{
+                                  left: `${l.x}%`,
+                                  top: `${l.y}%`,
+                                  width: l.w ? `${l.w}%` : undefined,
+                                  height: l.h ? `${l.h}%` : undefined,
+                                }}
+                                title="Tree (AI Detected)"
+                              />
+                            ))}
+                            
+                            {/* Bush Markers */}
+                            {getLocationsForImage(activeImageIndex).filter(l => l.type === 'bush').map((l, i) => (
+                              <div 
+                                key={`bush-${i}`} 
+                                className={styles.treeMarker}
+                                style={{
+                                  left: `${l.x}%`,
+                                  top: `${l.y}%`,
+                                  width: l.w ? `${l.w}%` : '2%',
+                                  height: l.h ? `${l.h}%` : '2%',
+                                  backgroundColor: '#86efac', // Light green for bushes
+                                  borderRadius: '50%'
+                                }}
+                                title="Bush (AI Detected)"
+                              />
+                            ))}
+
+                            {/* Fallback only if count > 0 but NO locations found */}
+                            {(getLocationsForImage(activeImageIndex).filter(l => l.type === 'tree').length === 0) && (editedAnalysis?.treeCount || 0) > 0 && (
+                               Array.from({ length: Math.min(editedAnalysis?.treeCount || 0, 5) }).map((_, i) => (
+                                  <div key={`fallback-${i}`} className={styles.treeMarker} style={{ left: '50%', top: '50%', opacity: 0.5 }} title="Tree (Location Unknown)" />
+                               ))
+                            )}
+                          </div>
+                        )}
+
+                        {/* Pool Markers */}
+                        {showMasks.pool && (
+                           <div className={styles.maskPoolContainer}>
+                              {getLocationsForImage(activeImageIndex).filter(l => l.type === 'pool').map((l, i) => (
+                                <div 
+                                  key={`pool-${i}`}
+                                  className={styles.maskPool} 
+                                  style={{
+                                    left: `${l.x}%`,
+                                    top: `${l.y}%`,
+                                    width: `${l.w || 10}%`,
+                                    height: `${l.h || 10}%`,
+                                    position: 'absolute' 
+                                  }}
+                                  title="Pool Detected"
+                                />
+                              ))}
+                           </div>
+                        )}
+                        
+                        {/* Fence Mask */}
+                        {showMasks.fence && (editedAnalysis?.fenceLength || 0) > 0 && (
+                          <div 
+                            className={styles.maskFence}
+                            title={`Fence: ~${editedAnalysis?.fenceLength} linear ft`}
+                          />
+                        )}
+                      </>
+                    )}
+                    
+                    {/* --- SAM 3 SEGMENTATION POLYGONS (Priority) --- */}
+                    {hasSAM && (
+                      <svg
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          pointerEvents: 'none',
+                        }}
+                        viewBox="0 0 640 640"
+                        preserveAspectRatio="none"
+                      >
+                        {samMasks
+                          .filter((mask) => shouldShowSAMMask(mask.type)) // Respect toggles!
+                          .map((mask, i) => (
+                          mask.polygon && mask.polygon.length > 2 && (
+                            <polygon
+                              key={`sam-mask-${i}`}
+                              points={mask.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')}
+                              fill={mask.color || 'rgba(100, 100, 100, 0.3)'}
+                              stroke={mask.color?.replace('0.4', '0.8').replace('0.5', '0.9') || 'rgba(100, 100, 100, 0.7)'}
+                              strokeWidth="2"
+                            />
+                          )
+                        ))}
+                      </svg>
+                    )}
+                  </div>
                 );
               })()}
-            </div>
-          )}
           
           {/* Mask Legend & Toggles */}
           {activeImageIndex < 3 && (
