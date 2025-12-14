@@ -367,8 +367,8 @@ export default function AIAnalysis({
             className={styles.satelliteImage}
           />
           
-          {/* Visual Feature Masks - Only show for satellite views (index 0-2) */}
-          {activeImageIndex < 3 && (
+          {/* Visual Feature Masks - Only show for Image 1 (Zoom 21) since AI box_2d is relative to it */}
+          {activeImageIndex === 0 && (
             <div className={styles.featureMasks}>
               {/* Lawn Area Mask - Generic Overlay for now (Segmentation requires SAM) */}
               {showMasks.lawn && (editedAnalysis?.lawnSqft || 0) > 0 && (
