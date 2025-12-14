@@ -19,5 +19,10 @@ export interface PropertyAnalysis {
   drivewayPresent: boolean;
   confidence: number;
   notes: string[];
-  locations?: FeatureLocation[];
+  locations?: FeatureLocation[]; // Legacy single-image format
+  locationsByImage?: {
+    image1?: FeatureLocation[];
+    image2?: FeatureLocation[];
+    image3?: FeatureLocation[];
+  };
 }

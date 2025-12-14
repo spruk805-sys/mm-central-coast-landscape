@@ -13,7 +13,7 @@ export interface AIAnalysisConfig {
   userPhotos: { mime: string; data: string; label: string }[]; // Base64 strings
 }
 
-// Parse AI JSON response clean up
+// Parse AI JSON response
 const parseAIResponse = (textResponse: string, providerName: string): PropertyAnalysis => {
   try {
     const cleaned = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -22,6 +22,36 @@ const parseAIResponse = (textResponse: string, providerName: string): PropertyAn
     // Extract observations
     const observations = json.imageObservations ? 
       Object.values(json.imageObservations).filter(Boolean).map(o => `[${providerName} OBS] ${o}`) : [];
+
+    // Parse locations helper
+    const parseLocationsArray = (locs: any[]): any[] => {
+      if (!Array.isArray(locs)) return [];
+      return locs.map((loc: any) => {
+        if (loc.box_2d && Array.isArray(loc.box_2d) && loc.box_2d.length === 4) {
+          const [yMin, xMin, yMax, xMax] = loc.box_2d;
+          return { 
+            type: loc.type || 'unknown', 
+            x: xMin / 10, 
+            y: yMin / 10, 
+            w: Math.max(2, (xMax - xMin) / 10), 
+            h: Math.max(2, (yMax - yMin) / 10) 
+          };
+        }
+        return { type: loc.type || 'unknown', x: loc.x || 50, y: loc.y || 50, w: loc.w || 5, h: loc.h || 5 };
+      });
+    };
+
+    // Handle new locationsByImage format
+    const locationsByImage = json.locationsByImage ? {
+      image1: parseLocationsArray(json.locationsByImage.image1 || []),
+      image2: parseLocationsArray(json.locationsByImage.image2 || []),
+      image3: parseLocationsArray(json.locationsByImage.image3 || []),
+    } : undefined;
+
+    // Legacy single locations array (for backwards compatibility)
+    const locations = Array.isArray(json.locations) 
+      ? parseLocationsArray(json.locations) 
+      : (locationsByImage?.image1 || []);
 
     return {
       lawnSqft: Math.max(0, Math.round(json.lawnSqft || 0)),
@@ -37,30 +67,10 @@ const parseAIResponse = (textResponse: string, providerName: string): PropertyAn
       notes: Array.isArray(json.notes) 
         ? [...observations, ...json.notes.map((n: string) => `[${providerName}] ${n}`)]
         : [...observations],
-      locations: Array.isArray(json.locations) ? json.locations.map((loc: any) => {
-        // Gemini box_2d format: [y_min, x_min, y_max, x_max] on 0-1000 scale
-        // We need to convert to percentages (0-100)
-        if (loc.box_2d && Array.isArray(loc.box_2d) && loc.box_2d.length === 4) {
-          const [yMin, xMin, yMax, xMax] = loc.box_2d;
-          return {
-            type: loc.type || 'unknown',
-            x: xMin / 10,  // Convert 0-1000 to 0-100 percentage
-            y: yMin / 10,
-            w: Math.max(2, (xMax - xMin) / 10), // Width as percentage, min 2%
-            h: Math.max(2, (yMax - yMin) / 10), // Height as percentage, min 2%
-          };
-        }
-        // Fallback for direct x,y coordinates (assume already 0-100)
-        return {
-          type: loc.type || 'unknown',
-          x: loc.x || 50,
-          y: loc.y || 50,
-          w: loc.w || 5,
-          h: loc.h || 5,
-        };
-      }) : []
+      locations,
+      locationsByImage,
     };
-  } catch (e) {
+  } catch {
     throw new Error(`Failed to parse ${providerName} response: ${textResponse.substring(0, 100)}...`);
   }
 };
@@ -177,16 +187,24 @@ ${parcelInfo}
     "streetView": "Findings from street level...",
     "userPhotos": "Findings from provided photos..."
   },
-  "locations": [
-    { "type": "tree", "box_2d": [ymin, xmin, ymax, xmax] } 
-    // Return 5-10 key items. box_2d is [ymin, xmin, ymax, xmax] on 0-1000 scale relative to Image 1.
-  ],
+  "locationsByImage": {
+    "image1": [{ "type": "tree|bush|pool", "box_2d": [ymin, xmin, ymax, xmax] }],
+    "image2": [{ "type": "tree|bush|pool", "box_2d": [ymin, xmin, ymax, xmax] }],
+    "image3": [{ "type": "tree|bush|pool", "box_2d": [ymin, xmin, ymax, xmax] }]
+  },
   "lawnSqft": <number>, "treeCount": <number>, "bushCount": <number>,
   "hasPool": <bool>, "hasFence": <bool>, "fenceLength": <number>,
   "pathwaySqft": <number>, "gardenBeds": <number>, "drivewayPresent": <bool>,
   "confidence": <0.0-1.0>,
   "notes": [<string>]
-}`;
+}
+
+**IMPORTANT for locationsByImage:**
+- image1 = Very Close Satellite (Zoom 21) - box_2d relative to THIS image
+- image2 = Close Satellite (Zoom 20) - box_2d relative to THIS image  
+- image3 = Medium Satellite (Zoom 19) - box_2d relative to THIS image
+- box_2d format: [ymin, xmin, ymax, xmax] on 0-1000 scale
+- Same feature should appear in ALL 3 images at correctly scaled positions`;
 
   // Build Gemini Parts (Interleaved text labels + images)
   const geminiParts: GeminiPart[] = [{ text: analysisPrompt }];

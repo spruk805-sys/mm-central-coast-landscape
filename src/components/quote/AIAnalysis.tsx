@@ -171,6 +171,25 @@ export default function AIAnalysis({
     return "Low Confidence - Please Review";
   };
 
+  // Get locations for the current image (uses per-image locations if available)
+  const getLocationsForImage = (imageIndex: number): FeatureLocation[] => {
+    if (!editedAnalysis) return [];
+    
+    // Check for new locationsByImage format first
+    if (editedAnalysis.locationsByImage) {
+      const imageKey = `image${imageIndex + 1}` as keyof typeof editedAnalysis.locationsByImage;
+      const locs = editedAnalysis.locationsByImage[imageKey];
+      if (locs && locs.length > 0) return locs;
+    }
+    
+    // Fall back to legacy locations (only show on first image)
+    if (imageIndex === 0 && editedAnalysis.locations) {
+      return editedAnalysis.locations;
+    }
+    
+    return [];
+  };
+
   // Initial state - show analyze button
   if (!analysis && !isAnalyzing) {
     return (
@@ -367,8 +386,8 @@ export default function AIAnalysis({
             className={styles.satelliteImage}
           />
           
-          {/* Visual Feature Masks - Only show for Image 1 (Zoom 21) since AI box_2d is relative to it */}
-          {activeImageIndex === 0 && (
+          {/* Visual Feature Masks - Show on satellite views using per-image coordinates */}
+          {activeImageIndex < 3 && (
             <div className={styles.featureMasks}>
               {/* Lawn Area Mask - Generic Overlay for now (Segmentation requires SAM) */}
               {showMasks.lawn && (editedAnalysis?.lawnSqft || 0) > 0 && (
@@ -378,10 +397,10 @@ export default function AIAnalysis({
                 />
               )}
               
-              {/* Trees Markers - Real Locations */}
+              {/* Trees Markers - Using per-image locations */}
               {showMasks.trees && (
                 <div className={styles.maskTrees}>
-                  {editedAnalysis?.locations?.filter(l => l.type === 'tree').map((l, i) => (
+                  {getLocationsForImage(activeImageIndex).filter(l => l.type === 'tree').map((l, i) => (
                     <div 
                       key={`tree-${i}`} 
                       className={styles.treeMarker}
@@ -396,7 +415,7 @@ export default function AIAnalysis({
                   ))}
                   
                   {/* Bush Markers */}
-                  {editedAnalysis?.locations?.filter(l => l.type === 'bush').map((l, i) => (
+                  {getLocationsForImage(activeImageIndex).filter(l => l.type === 'bush').map((l, i) => (
                     <div 
                       key={`bush-${i}`} 
                       className={styles.treeMarker}
@@ -413,7 +432,7 @@ export default function AIAnalysis({
                   ))}
 
                   {/* Fallback only if count > 0 but NO locations found (legacy/failure) */}
-                  {((editedAnalysis?.locations?.filter(l => l.type === 'tree').length || 0) === 0) && (editedAnalysis?.treeCount || 0) > 0 && (
+                  {(getLocationsForImage(activeImageIndex).filter(l => l.type === 'tree').length === 0) && (editedAnalysis?.treeCount || 0) > 0 && (
                      Array.from({ length: Math.min(editedAnalysis?.treeCount || 0, 5) }).map((_, i) => (
                         <div key={`fallback-${i}`} className={styles.treeMarker} style={{ left: '50%', top: '50%', opacity: 0.5 }} title="Tree (Location Unknown)" />
                      ))
@@ -421,10 +440,10 @@ export default function AIAnalysis({
                 </div>
               )}
 
-              {/* Pool Markers - Real Locations */}
+              {/* Pool Markers - Using per-image locations */}
               {showMasks.pool && (
                  <div className={styles.maskPoolContainer}>
-                    {editedAnalysis?.locations?.filter(l => l.type === 'pool').map((l, i) => (
+                    {getLocationsForImage(activeImageIndex).filter(l => l.type === 'pool').map((l, i) => (
                       <div 
                         key={`pool-${i}`}
                         className={styles.maskPool} // Reusing pool style, assuming absolute positioning support
