@@ -162,8 +162,81 @@ export const runConsensusAnalysis = async (config: AIAnalysisConfig): Promise<{ 
   const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
   if (!apiKey) throw new Error("Gemini API Key missing");
 
-  // Construct Prompt
+  const startTime = Date.now();
   const allImages = [...config.satelliteImages, ...config.streetViewImages, ...config.userPhotos];
+  
+  // ========== STEP 1: RUN SAM 3 FIRST ==========
+  // This gives us precise segmentation that helps AI understand property features
+  console.log('[Consensus] STEP 1: Running SAM 3 segmentation first...');
+  
+  let samMasksByImage: PropertyAnalysis['samMasksByImage'] = undefined;
+  let samSummary = '';
+  
+  try {
+    const samAgent = getSAMAgent();
+    const samStatus = samAgent.getStatus();
+    
+    if (samStatus.healthy && config.satelliteImages.length >= 3) {
+      // Detect EVERYTHING - we'll filter to property boundary later
+      const samPrompts = [
+        'lawn grass',
+        'tree',
+        'bush shrub',
+        'swimming pool',
+        'fence',
+        'driveway',
+        'patio deck',
+        'garden bed',
+        'pathway walkway',
+        'shed',
+        'roof house',
+        'solar panel', // For solar panel cleaning service
+      ];
+      
+      // Process all 3 satellite images in parallel
+      const samResults = await Promise.all(
+        config.satelliteImages.slice(0, 3).map(async (img, idx) => {
+          console.log(`[Consensus] SAM processing image ${idx + 1}...`);
+          const masks = await samAgent.segmentWithText(img.data, samPrompts, img.mime);
+          return { imageKey: `image${idx + 1}` as 'image1' | 'image2' | 'image3', masks };
+        })
+      );
+      
+      // Build samMasksByImage structure
+      samMasksByImage = {};
+      let totalMasks = 0;
+      const featureCounts: Record<string, number> = {};
+      
+      for (const result of samResults) {
+        if (result.masks.length > 0) {
+          samMasksByImage[result.imageKey] = result.masks;
+          totalMasks += result.masks.length;
+          // Count detected features
+          for (const mask of result.masks) {
+            featureCounts[mask.type] = (featureCounts[mask.type] || 0) + 1;
+          }
+        }
+      }
+      
+      // Build summary for AI prompt
+      if (totalMasks > 0) {
+        const featureList = Object.entries(featureCounts)
+          .map(([type, count]) => `${type}: ${count}`)
+          .join(', ');
+        samSummary = `
+**SAM 3 PRE-DETECTION RESULTS:**
+✅ Automated segmentation detected: ${featureList}
+🎯 These are pixel-accurate masks - use them to validate your counts.
+⚠️ SAM may detect neighbor's features too - cross-check with parcel boundary!`;
+        console.log(`[Consensus] SAM 3 detected: ${featureList}`);
+      }
+    }
+  } catch (samError) {
+    console.error('[Consensus] SAM pre-detection error (non-fatal):', samError);
+  }
+
+  // ========== STEP 2: BUILD AI PROMPT WITH SAM RESULTS ==========
+  console.log('[Consensus] STEP 2: Running AI analysis with SAM context...');
   
   const parcelInfo = config.parcelData && config.parcelData.sqft
     ? `
@@ -182,6 +255,7 @@ export const runConsensusAnalysis = async (config: AIAnalysisConfig): Promise<{ 
 Address: ${config.address || "Unknown"}
 Coordinates: ${config.lat}, ${config.lng} (CENTER of property)
 ${parcelInfo}
+${samSummary}
 
 **INSTRUCTIONS:**
 1. **Visual Inventory (MANDATORY)**: Analyze EACH image (labeled below). List 1 specific observation for each to prove you looked at it.
@@ -198,7 +272,7 @@ ${parcelInfo}
    - If a feature (e.g., Pool) appears in Image 3 (Wide) but NOT in Image 1 (Close), it's outside the property — IGNORE IT.
    - For Street View: Focus ONLY on the property at the center, ignore houses across the street.
 
-4. **Consensus**: Provide conservative estimates.
+4. **Consensus with SAM**: If SAM detected features, validate which are INSIDE the property boundary.
 
 **REQUIRED JSON OUTPUT:**
 {
@@ -233,8 +307,7 @@ ${parcelInfo}
     geminiParts.push({ inline_data: { mime_type: img.mime, data: img.data } });
   });
 
-  console.log(`[Consensus] Starting Analysis on ${allImages.length} images...`);
-  const startTime = Date.now();
+  console.log(`[Consensus] Starting AI Analysis on ${allImages.length} images...`);
 
   const results = await Promise.allSettled([
     callGemini(apiKey, geminiParts),
@@ -278,44 +351,16 @@ ${parcelInfo}
     finalAnalysis.notes.push(`Single Source: ${providerUsed}`);
   }
 
-  // Generate SAM segmentation masks for all 3 satellite images
-  try {
-    const samAgent = getSAMAgent();
-    const samStatus = samAgent.getStatus();
-    
-    if (samStatus.healthy && config.satelliteImages.length >= 3) {
-      console.log('[Consensus] Generating SAM masks for all satellite images...');
-      const samPrompts = ['lawn grass', 'tree', 'swimming pool', 'fence'];
-      
-      // Process all 3 satellite images in parallel
-      const samResults = await Promise.all(
-        config.satelliteImages.slice(0, 3).map(async (img, idx) => {
-          console.log(`[Consensus] SAM processing image ${idx + 1}...`);
-          const masks = await samAgent.segmentWithText(img.data, samPrompts, img.mime);
-          return { imageKey: `image${idx + 1}` as 'image1' | 'image2' | 'image3', masks };
-        })
-      );
-      
-      // Build samMasksByImage structure
-      const samMasksByImage: PropertyAnalysis['samMasksByImage'] = {};
-      let totalMasks = 0;
-      
-      for (const result of samResults) {
-        if (result.masks.length > 0) {
-          samMasksByImage[result.imageKey] = result.masks;
-          totalMasks += result.masks.length;
-        }
-      }
-      
-      if (totalMasks > 0) {
-        finalAnalysis.samMasksByImage = samMasksByImage;
-        finalAnalysis.notes.push(`[SAM] Generated ${totalMasks} masks across ${Object.keys(samMasksByImage).length} images`);
-        console.log(`[Consensus] SAM generated ${totalMasks} total masks`);
-      }
-    }
-  } catch (samError) {
-    console.error('[Consensus] SAM error (non-fatal):', samError);
-    finalAnalysis.notes.push('[SAM] Segmentation skipped - API error');
+  // ========== STEP 3: ATTACH PRE-COMPUTED SAM MASKS ==========
+  // SAM was run first (Step 1), now attach results to the analysis
+  if (samMasksByImage && Object.keys(samMasksByImage).length > 0) {
+    finalAnalysis.samMasksByImage = samMasksByImage;
+    let totalMasks = 0;
+    if (samMasksByImage.image1) totalMasks += samMasksByImage.image1.length;
+    if (samMasksByImage.image2) totalMasks += samMasksByImage.image2.length;
+    if (samMasksByImage.image3) totalMasks += samMasksByImage.image3.length;
+    finalAnalysis.notes.push(`[SAM] Pre-detected ${totalMasks} masks across ${Object.keys(samMasksByImage).length} images`);
+    console.log(`[Consensus] STEP 3: Attached ${totalMasks} SAM masks to analysis`);
   }
 
   // Apply boundary enforcement to filter features outside property
