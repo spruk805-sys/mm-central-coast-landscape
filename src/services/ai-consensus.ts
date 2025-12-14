@@ -1,5 +1,6 @@
 
 import { PropertyAnalysis } from "@/types/property";
+import { getSAMAgent } from "./site-manager/sam-agent";
 
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
 
@@ -256,6 +257,31 @@ ${parcelInfo}
     finalAnalysis = successes[0];
     providerUsed = results[0].status === 'fulfilled' ? "Gemini 3" : "GPT-4o (Fallback)";
     finalAnalysis.notes.push(`Single Source: ${providerUsed}`);
+  }
+
+  // Generate SAM segmentation masks (runs after AI analysis)
+  try {
+    const samAgent = getSAMAgent();
+    const samStatus = samAgent.getStatus();
+    
+    if (samStatus.healthy && config.satelliteImages.length > 0) {
+      console.log('[Consensus] Generating SAM masks...');
+      const firstSatellite = config.satelliteImages[0];
+      const samMasks = await samAgent.segmentWithText(
+        firstSatellite.data,
+        ['lawn grass', 'tree', 'swimming pool', 'fence'],
+        firstSatellite.mime
+      );
+      
+      if (samMasks.length > 0) {
+        finalAnalysis.samMasks = samMasks;
+        finalAnalysis.notes.push(`[SAM] Generated ${samMasks.length} segmentation masks`);
+        console.log(`[Consensus] SAM generated ${samMasks.length} masks`);
+      }
+    }
+  } catch (samError) {
+    console.error('[Consensus] SAM error (non-fatal):', samError);
+    finalAnalysis.notes.push('[SAM] Segmentation skipped - API unavailable');
   }
 
   return { provider: providerUsed, analysis: finalAnalysis };

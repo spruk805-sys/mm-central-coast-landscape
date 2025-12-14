@@ -25,4 +25,11 @@ export interface PropertyAnalysis {
     image2?: FeatureLocation[];
     image3?: FeatureLocation[];
   };
+  samMasks?: {
+    type: string;
+    mask: string; // Base64 PNG mask
+    area: number;
+    percentage: number;
+    bounds: { x: number; y: number; w: number; h: number };
+  }[];
 }
