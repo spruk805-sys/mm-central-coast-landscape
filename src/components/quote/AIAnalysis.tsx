@@ -4,20 +4,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import styles from "./AIAnalysis.module.css";
 import type { Coordinates } from "@/types";
-
-interface PropertyAnalysis {
-  lawnSqft: number;
-  treeCount: number;
-  bushCount: number;
-  hasPool: boolean;
-  hasFence: boolean;
-  fenceLength: number;
-  pathwaySqft: number;
-  gardenBeds: number;
-  drivewayPresent: boolean;
-  confidence: number;
-  notes: string[];
-}
+import type { PropertyAnalysis, FeatureLocation } from "@/types/property";
 
 interface AIAnalysisProps {
   coordinates: Coordinates;
@@ -298,6 +285,7 @@ export default function AIAnalysis({
           <button
             onClick={runAnalysis}
             className="btn btn-primary btn-lg"
+            type="button"
             disabled={isAnalyzing || retryCountdown !== null}
           >
             {retryCountdown !== null 
@@ -382,7 +370,7 @@ export default function AIAnalysis({
           {/* Visual Feature Masks - Only show for satellite views (index 0-2) */}
           {activeImageIndex < 3 && (
             <div className={styles.featureMasks}>
-              {/* Lawn Area Mask */}
+              {/* Lawn Area Mask - Generic Overlay for now (Segmentation requires SAM) */}
               {showMasks.lawn && (editedAnalysis?.lawnSqft || 0) > 0 && (
                 <div 
                   className={styles.maskLawn}
@@ -390,44 +378,74 @@ export default function AIAnalysis({
                 />
               )}
               
-              {/* Trees Mask - scatter dots */}
-              {showMasks.trees && (editedAnalysis?.treeCount || 0) > 0 && (
+              {/* Trees Markers - Real Locations */}
+              {showMasks.trees && (
                 <div className={styles.maskTrees}>
-                  {Array.from({ length: Math.min(editedAnalysis?.treeCount || 0, 12) }).map((_, i) => (
+                  {editedAnalysis?.locations?.filter(l => l.type === 'tree').map((l, i) => (
                     <div 
-                      key={i} 
+                      key={`tree-${i}`} 
                       className={styles.treeMarker}
                       style={{
-                        left: `${15 + (i % 4) * 20 + Math.random() * 10}%`,
-                        top: `${20 + Math.floor(i / 4) * 25 + Math.random() * 10}%`,
+                        left: `${l.x}%`,
+                        top: `${l.y}%`,
+                        width: l.w ? `${l.w}%` : undefined,
+                        height: l.h ? `${l.h}%` : undefined,
                       }}
-                      title="Tree"
+                      title="Tree (AI Detected)"
                     />
                   ))}
+                  
+                  {/* Bush Markers */}
+                  {editedAnalysis?.locations?.filter(l => l.type === 'bush').map((l, i) => (
+                    <div 
+                      key={`bush-${i}`} 
+                      className={styles.treeMarker}
+                      style={{
+                        left: `${l.x}%`,
+                        top: `${l.y}%`,
+                        width: l.w ? `${l.w}%` : '2%',
+                        height: l.h ? `${l.h}%` : '2%',
+                        backgroundColor: '#86efac', // Light green for bushes
+                        borderRadius: '50%'
+                      }}
+                      title="Bush (AI Detected)"
+                    />
+                  ))}
+
+                  {/* Fallback only if count > 0 but NO locations found (legacy/failure) */}
+                  {((editedAnalysis?.locations?.filter(l => l.type === 'tree').length || 0) === 0) && (editedAnalysis?.treeCount || 0) > 0 && (
+                     Array.from({ length: Math.min(editedAnalysis?.treeCount || 0, 5) }).map((_, i) => (
+                        <div key={`fallback-${i}`} className={styles.treeMarker} style={{ left: '50%', top: '50%', opacity: 0.5 }} title="Tree (Location Unknown)" />
+                     ))
+                  )}
                 </div>
               )}
+
+              {/* Pool Markers - Real Locations */}
+              {showMasks.pool && (
+                 <div className={styles.maskPoolContainer}>
+                    {editedAnalysis?.locations?.filter(l => l.type === 'pool').map((l, i) => (
+                      <div 
+                        key={`pool-${i}`}
+                        className={styles.maskPool} // Reusing pool style, assuming absolute positioning support
+                        style={{
+                          left: `${l.x}%`,
+                          top: `${l.y}%`,
+                          width: `${l.w || 10}%`,
+                          height: `${l.h || 10}%`,
+                          position: 'absolute' 
+                        }}
+                        title="Pool Detected"
+                      />
+                    ))}
+                 </div>
+              )}
               
-              {/* Fence Mask - border lines */}
+              {/* Fence Mask - Still generic unless locations found */}
               {showMasks.fence && (editedAnalysis?.fenceLength || 0) > 0 && (
                 <div 
                   className={styles.maskFence}
                   title={`Fence: ~${editedAnalysis?.fenceLength} linear ft`}
-                />
-              )}
-              
-              {/* Pathway Mask */}
-              {showMasks.pathway && (editedAnalysis?.pathwaySqft || 0) > 0 && (
-                <div 
-                  className={styles.maskPathway}
-                  title={`Pathway: ~${editedAnalysis?.pathwaySqft} sq ft`}
-                />
-              )}
-              
-              {/* Pool Mask */}
-              {showMasks.pool && editedAnalysis?.hasPool && (
-                <div 
-                  className={styles.maskPool}
-                  title="Pool/Hot Tub Detected"
                 />
               )}
             </div>

@@ -1,0 +1,229 @@
+
+import { PropertyAnalysis } from "@/types/property";
+
+type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
+
+export interface AIAnalysisConfig {
+  address: string;
+  lat: number;
+  lng: number;
+  parcelData: any;
+  satelliteImages: { mime: string; data: string; label: string }[];
+  streetViewImages: { mime: string; data: string; label: string }[];
+  userPhotos: { mime: string; data: string; label: string }[]; // Base64 strings
+}
+
+// Parse AI JSON response clean up
+const parseAIResponse = (textResponse: string, providerName: string): PropertyAnalysis => {
+  try {
+    const cleaned = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const json = JSON.parse(cleaned);
+    
+    // Extract observations
+    const observations = json.imageObservations ? 
+      Object.values(json.imageObservations).filter(Boolean).map(o => `[${providerName} OBS] ${o}`) : [];
+
+    return {
+      lawnSqft: Math.max(0, Math.round(json.lawnSqft || 0)),
+      treeCount: Math.max(0, Math.round(json.treeCount || 0)),
+      bushCount: Math.max(0, Math.round(json.bushCount || 0)),
+      hasPool: Boolean(json.hasPool),
+      hasFence: Boolean(json.hasFence),
+      fenceLength: Math.max(0, Math.round(json.fenceLength || 0)),
+      pathwaySqft: Math.max(0, Math.round(json.pathwaySqft || 0)),
+      gardenBeds: Math.max(0, Math.round(json.gardenBeds || 0)),
+      drivewayPresent: Boolean(json.drivewayPresent),
+      confidence: Math.min(1, Math.max(0, json.confidence || 0.7)),
+      notes: Array.isArray(json.notes) 
+        ? [...observations, ...json.notes.map((n: string) => `[${providerName}] ${n}`)]
+        : [...observations],
+      locations: Array.isArray(json.locations) ? json.locations.map((l: any) => ({
+        type: l.type,
+        y: (l.box_2d?.[0] || l.y || 0) / (l.box_2d ? 10 : 1), // Handle 0-1000 scale if box_2d, else assume 0-100
+        x: (l.box_2d?.[1] || l.x || 0) / (l.box_2d ? 10 : 1),
+        h: l.box_2d ? ((l.box_2d[2] - l.box_2d[0]) / 10) : (l.h || 5),
+        w: l.box_2d ? ((l.box_2d[3] - l.box_2d[1]) / 10) : (l.w || 5)
+      })) : []
+    };
+  } catch (e) {
+    throw new Error(`Failed to parse ${providerName} response: ${textResponse.substring(0, 100)}...`);
+  }
+};
+
+// OpenAI Implementation
+const callOpenAI = async (promptText: string, images: { mime: string; data: string; label: string }[]): Promise<PropertyAnalysis> => {
+  const openAIKey = process.env.OPENAI_API_KEY;
+  if (!openAIKey) throw new Error("OpenAI Key missing");
+
+  // OpenAI doesn't support "interleaved" text/images as cleanly in the user message in all library versions, 
+  // but the chat API supports an array of {type: text} | {type: image_url}.
+  // We will interleave labels.
+  
+  const content: any[] = [{ type: "text", text: promptText }];
+  
+  images.forEach((img, index) => {
+    content.push({ type: "text", text: `\n--- IMAGE ${index + 1}: ${img.label} ---\n` });
+    content.push({
+      type: "image_url",
+      image_url: { 
+        url: `data:${img.mime};base64,${img.data}`,
+        detail: "high" 
+      }
+    });
+  });
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openAIKey}` },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      messages: [{ role: "user", content }],
+      max_tokens: 1024,
+      temperature: 0.2,
+      response_format: { type: "json_object" }
+    })
+  });
+
+  if (!res.ok) throw new Error(`OpenAI Status ${res.status}`);
+  const data = await res.json();
+  return parseAIResponse(data.choices[0].message.content, "GPT-4o");
+};
+
+// Gemini Implementation
+const callGemini = async (apiKey: string, geminiParts: GeminiPart[]): Promise<PropertyAnalysis> => {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: geminiParts }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+      }),
+    }
+  );
+  
+  if (res.status === 429) throw new Error("Rate Limited");
+  if (!res.ok) throw new Error(`Gemini Status ${res.status}`);
+  
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Gemini returned empty text");
+  
+  return parseAIResponse(text, "Gemini");
+};
+
+export const runConsensusAnalysis = async (config: AIAnalysisConfig): Promise<{ provider: string, analysis: PropertyAnalysis }> => {
+  const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
+  if (!apiKey) throw new Error("Gemini API Key missing");
+
+  // Construct Prompt
+  const allImages = [...config.satelliteImages, ...config.streetViewImages, ...config.userPhotos];
+  
+  const parcelInfo = config.parcelData 
+    ? `
+**VERIFIED PARCEL BOUNDARY DATA (from Regrid.com):**
+- APN: ${config.parcelData.apn}
+- Lot Size: ${config.parcelData.sqft.toLocaleString()} sq ft (${config.parcelData.acres.toFixed(2)} acres)
+- Dimensions: ~${config.parcelData.dimensions.latFeet}ft x ${config.parcelData.dimensions.lngFeet}ft
+- Perimeter: ${config.parcelData.dimensions.perimeterFeet}ft
+⚠️ USE THESE EXACT DIMENSIONS. Lawn < Lot Size.
+`
+    : `**PARCEL BOUNDARY:** No exact data. Estimate from visual landmarks.`;
+
+  const analysisPrompt = `You are an expert landscaping property analyst. Analyze the following ${allImages.length} images of a SINGLE property.
+
+**PROPERTY:**
+Address: ${config.address || "Unknown"}
+Coordinates: ${config.lat}, ${config.lng} (CENTER of property)
+${parcelInfo}
+
+**INSTRUCTIONS:**
+1. **Visual Inventory (MANDATORY)**: Analyze EACH image (labeled below). List 1 specific observation for each to prove you looked at it.
+
+2. **🔴 BOUNDARY LINE (CRITICAL)**: 
+   - On satellite images, a **COLORED POLYGON** is drawn showing the property boundary.
+   - **RED LINE** = Exact legal parcel boundary from county records.
+   - **ORANGE LINE** = Estimated boundary (~100ft centered on property).
+   - **ONLY count features INSIDE this boundary line.** Everything outside belongs to neighbors — IGNORE IT.
+   - Count trees, pools, lawn ONLY within the boundary.
+
+3. **Cross-Reference Rule**: 
+   - Image 1 (Zoom 21) is the TRUTH for identifying features.
+   - If a feature (e.g., Pool) appears in Image 3 (Wide) but NOT in Image 1 (Close), it's outside the property — IGNORE IT.
+   - For Street View: Focus ONLY on the property at the center, ignore houses across the street.
+
+4. **Consensus**: Provide conservative estimates.
+
+**REQUIRED JSON OUTPUT:**
+{
+  "imageObservations": {
+    "satellite": "Findings from aerial views...",
+    "streetView": "Findings from street level...",
+    "userPhotos": "Findings from provided photos..."
+  },
+  "locations": [
+    { "type": "tree", "box_2d": [ymin, xmin, ymax, xmax] } 
+    // Return 5-10 key items. box_2d is [ymin, xmin, ymax, xmax] on 0-1000 scale relative to Image 1.
+  ],
+  "lawnSqft": <number>, "treeCount": <number>, "bushCount": <number>,
+  "hasPool": <bool>, "hasFence": <bool>, "fenceLength": <number>,
+  "pathwaySqft": <number>, "gardenBeds": <number>, "drivewayPresent": <bool>,
+  "confidence": <0.0-1.0>,
+  "notes": [<string>]
+}`;
+
+  // Build Gemini Parts (Interleaved text labels + images)
+  const geminiParts: GeminiPart[] = [{ text: analysisPrompt }];
+  allImages.forEach((img, i) => {
+    geminiParts.push({ text: `\n\n--- IMAGE ${i + 1}: ${img.label} ---\n` });
+    geminiParts.push({ inline_data: { mime_type: img.mime, data: img.data } });
+  });
+
+  console.log(`[Consensus] Starting Analysis on ${allImages.length} images...`);
+  const startTime = Date.now();
+
+  const results = await Promise.allSettled([
+    callGemini(apiKey, geminiParts),
+    callOpenAI(analysisPrompt, allImages)
+  ]);
+
+  const successes = results
+    .filter((r): r is PromiseFulfilledResult<PropertyAnalysis> => r.status === 'fulfilled')
+    .map(r => r.value);
+
+  if (successes.length === 0) {
+    const errors = results.map(r => r.status === 'rejected' ? r.reason : '').join("; ");
+    if (errors.includes("Rate Limited")) throw new Error("Rate Limited");
+    throw new Error(`Consensus Failed: ${errors}`);
+  }
+
+  let finalAnalysis: PropertyAnalysis;
+  let providerUsed = "";
+
+  if (successes.length === 2) {
+    const [r1, r2] = successes;
+    // Consensus Merge
+    finalAnalysis = {
+      lawnSqft: Math.round((r1.lawnSqft + r2.lawnSqft) / 2),
+      treeCount: Math.round((r1.treeCount + r2.treeCount) / 2),
+      bushCount: Math.round((r1.bushCount + r2.bushCount) / 2),
+      hasPool: r1.hasPool || r2.hasPool,
+      hasFence: r1.hasFence || r2.hasFence,
+      fenceLength: Math.max(r1.fenceLength, r2.fenceLength),
+      pathwaySqft: Math.round((r1.pathwaySqft + r2.pathwaySqft) / 2),
+      gardenBeds: Math.round((r1.gardenBeds + r2.gardenBeds) / 2),
+      drivewayPresent: r1.drivewayPresent || r2.drivewayPresent,
+      confidence: Math.min(0.98, ((r1.confidence + r2.confidence) / 2) + 0.1),
+      notes: [...r1.notes, ...r2.notes, `Verified by Consensus (${Date.now() - startTime}ms)`],
+      locations: [...(r1.locations || []), ...(r2.locations || [])]
+    };
+    providerUsed = "Consensus (Gemini/OpenAI)";
+  } else {
+    finalAnalysis = successes[0];
+    providerUsed = results[0].status === 'fulfilled' ? "Gemini 3" : "GPT-4o (Fallback)";
+    finalAnalysis.notes.push(`Single Source: ${providerUsed}`);
+  }
+
+  return { provider: providerUsed, analysis: finalAnalysis };
+};
