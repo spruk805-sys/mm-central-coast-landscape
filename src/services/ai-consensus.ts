@@ -24,34 +24,39 @@ const parseAIResponse = (textResponse: string, providerName: string): PropertyAn
     const observations = json.imageObservations ? 
       Object.values(json.imageObservations).filter(Boolean).map(o => `[${providerName} OBS] ${o}`) : [];
 
-    // Parse locations helper
-    const parseLocationsArray = (locs: any[]): any[] => {
+    // Parse locations helper with debug logging
+    const parseLocationsArray = (locs: any[], source: string): any[] => {
       if (!Array.isArray(locs)) return [];
-      return locs.map((loc: any) => {
+      console.log(`[AI Parse] Processing ${locs.length} locations for ${source}`);
+      return locs.map((loc: any, idx: number) => {
         if (loc.box_2d && Array.isArray(loc.box_2d) && loc.box_2d.length === 4) {
           const [yMin, xMin, yMax, xMax] = loc.box_2d;
-          return { 
+          // Gemini returns 0-1000 scale, convert to 0-100%
+          const result = { 
             type: loc.type || 'unknown', 
             x: xMin / 10, 
             y: yMin / 10, 
             w: Math.max(2, (xMax - xMin) / 10), 
             h: Math.max(2, (yMax - yMin) / 10) 
           };
+          console.log(`[AI Parse] ${source} item ${idx}: type=${loc.type}, box_2d=[${yMin},${xMin},${yMax},${xMax}] → pos(${result.x.toFixed(1)}%, ${result.y.toFixed(1)}%)`);
+          return result;
         }
+        console.log(`[AI Parse] ${source} item ${idx}: using fallback position (no valid box_2d)`);
         return { type: loc.type || 'unknown', x: loc.x || 50, y: loc.y || 50, w: loc.w || 5, h: loc.h || 5 };
       });
     };
 
     // Handle new locationsByImage format
     const locationsByImage = json.locationsByImage ? {
-      image1: parseLocationsArray(json.locationsByImage.image1 || []),
-      image2: parseLocationsArray(json.locationsByImage.image2 || []),
-      image3: parseLocationsArray(json.locationsByImage.image3 || []),
+      image1: parseLocationsArray(json.locationsByImage.image1 || [], 'image1'),
+      image2: parseLocationsArray(json.locationsByImage.image2 || [], 'image2'),
+      image3: parseLocationsArray(json.locationsByImage.image3 || [], 'image3'),
     } : undefined;
 
     // Legacy single locations array (for backwards compatibility)
     const locations = Array.isArray(json.locations) 
-      ? parseLocationsArray(json.locations) 
+      ? parseLocationsArray(json.locations, 'legacy') 
       : (locationsByImage?.image1 || []);
 
     return {
