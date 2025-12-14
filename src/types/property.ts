@@ -27,9 +27,8 @@ export interface PropertyAnalysis {
   };
   samMasks?: {
     type: string;
-    mask: string; // Base64 PNG mask
-    area: number;
-    percentage: number;
-    bounds: { x: number; y: number; w: number; h: number };
+    polygon: number[][]; // Array of [x, y] points for SVG path
+    confidence: number;
+    color?: string; // Color for this mask type
   }[];
 }

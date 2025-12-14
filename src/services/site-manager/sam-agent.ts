@@ -12,12 +12,9 @@ export interface SegmentationPrompt {
 
 export interface SegmentationResult {
   type: string;
-  mask: string; // Base64 PNG mask
-  maskUrl?: string;
-  area: number; // pixels
-  percentage: number; // of total image
+  polygon: number[][]; // Array of [x, y] points for SVG path
   confidence: number;
-  bounds: { x: number; y: number; w: number; h: number };
+  color?: string; // Color for this mask type
 }
 
 export interface SAMConfig {
@@ -114,7 +111,17 @@ export class SAMAgent implements HaulingAgent {
       const data = await response.json();
       console.log(`[SAMAgent] SAM 3 response keys:`, Object.keys(data));
       
-      // SAM 3 returns prompt_results array
+      // Color mapping for different feature types
+      const colorMap: Record<string, string> = {
+        'lawn grass': 'rgba(34, 197, 94, 0.4)',
+        'tree': 'rgba(21, 128, 61, 0.5)',
+        'swimming pool': 'rgba(59, 130, 246, 0.5)',
+        'fence': 'rgba(168, 162, 158, 0.5)',
+        'driveway': 'rgba(156, 163, 175, 0.4)',
+        'garden bed': 'rgba(139, 69, 19, 0.4)',
+      };
+      
+      // SAM 3 returns prompt_results array with polygon masks
       if (data.prompt_results && Array.isArray(data.prompt_results)) {
         for (let i = 0; i < data.prompt_results.length; i++) {
           const promptResult = data.prompt_results[i];
@@ -122,23 +129,19 @@ export class SAMAgent implements HaulingAgent {
           
           if (promptResult.predictions && Array.isArray(promptResult.predictions)) {
             for (const pred of promptResult.predictions) {
-              // Handle mask data
-              if (pred.mask || pred.masks) {
-                const maskData = pred.mask || (pred.masks && pred.masks[0]);
-                results.push({
-                  type: promptText,
-                  mask: typeof maskData === 'string' ? maskData : JSON.stringify(maskData),
-                  maskUrl: pred.mask_url,
-                  area: pred.area || 0,
-                  percentage: pred.percentage || 0,
-                  confidence: pred.confidence || 0.8,
-                  bounds: pred.bbox ? {
-                    x: pred.bbox.x || 0,
-                    y: pred.bbox.y || 0,
-                    w: pred.bbox.width || 100,
-                    h: pred.bbox.height || 100,
-                  } : { x: 0, y: 0, w: 100, h: 100 },
-                });
+              // SAM 3 returns masks as arrays of polygon points
+              if (pred.masks && Array.isArray(pred.masks) && pred.masks.length > 0) {
+                // Each mask is an array of [x, y] points
+                for (const maskPolygon of pred.masks) {
+                  if (Array.isArray(maskPolygon) && maskPolygon.length > 2) {
+                    results.push({
+                      type: promptText,
+                      polygon: maskPolygon, // Already in [[x,y], [x,y], ...] format
+                      confidence: pred.confidence || 0.8,
+                      color: colorMap[promptText] || 'rgba(100, 100, 100, 0.4)',
+                    });
+                  }
+                }
               }
             }
           }
@@ -203,16 +206,17 @@ export class SAMAgent implements HaulingAgent {
         const data = await response.json();
         
         if (data.masks && data.masks.length > 0) {
-          const mask = data.masks[0];
-          results.push({
-            type: box.type,
-            mask: mask.mask_base64 || '',
-            maskUrl: mask.mask_url,
-            area: mask.area || 0,
-            percentage: mask.percentage || 0,
-            confidence: mask.confidence || 0.8,
-            bounds: { x: box.x, y: box.y, w: box.w, h: box.h },
-          });
+          // Convert each mask to polygon format
+          for (const mask of data.masks) {
+            if (Array.isArray(mask) && mask.length > 2) {
+              results.push({
+                type: box.type,
+                polygon: mask, // Polygon points
+                confidence: 0.8,
+                color: 'rgba(100, 100, 100, 0.4)',
+              });
+            }
+          }
         }
       }
     } catch (error) {
