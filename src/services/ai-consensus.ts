@@ -294,9 +294,9 @@ ${samSummary}
 }
 
 **IMPORTANT for locationsByImage:**
-- image1 = Very Close Satellite (Zoom 21) - box_2d relative to THIS image
-- image2 = Close Satellite (Zoom 20) - box_2d relative to THIS image  
-- image3 = Medium Satellite (Zoom 19) - box_2d relative to THIS image
+- image1 = Very Close Satellite (Zoom 21)
+- image2 = Close Satellite (Zoom 20)
+- image3 = Medium Satellite (Zoom 19)
 - box_2d format: [ymin, xmin, ymax, xmax] on 0-1000 scale
 - Same feature should appear in ALL 3 images at correctly scaled positions`;
 
@@ -356,9 +356,11 @@ ${samSummary}
   if (samMasksByImage && Object.keys(samMasksByImage).length > 0) {
     finalAnalysis.samMasksByImage = samMasksByImage;
     let totalMasks = 0;
-    if (samMasksByImage.image1) totalMasks += samMasksByImage.image1.length;
-    if (samMasksByImage.image2) totalMasks += samMasksByImage.image2.length;
-    if (samMasksByImage.image3) totalMasks += samMasksByImage.image3.length;
+    // Sum up masks for all potential images (1-6)
+    Object.values(samMasksByImage).forEach(masks => {
+        if (masks) totalMasks += masks.length;
+    });
+    
     finalAnalysis.notes.push(`[SAM] Pre-detected ${totalMasks} masks across ${Object.keys(samMasksByImage).length} images`);
     console.log(`[Consensus] STEP 3: Attached ${totalMasks} SAM masks to analysis`);
   }

@@ -44,5 +44,8 @@ export interface PropertyAnalysis {
       confidence: number;
       color?: string;
     }[];
+    image4?: { type: string; polygon: number[][]; confidence: number; color?: string; }[];
+    image5?: { type: string; polygon: number[][]; confidence: number; color?: string; }[];
+    image6?: { type: string; polygon: number[][]; confidence: number; color?: string; }[];
   };
 }

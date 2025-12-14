@@ -387,10 +387,11 @@ export default function AIAnalysis({
           />
           
               {/* Visual Feature Masks - Show on satellite views using per-image coordinates */}
-              {activeImageIndex < 3 && (() => {
-                const imageKey = `image${activeImageIndex + 1}` as 'image1' | 'image2' | 'image3';
+              {activeImageIndex < 6 && (() => {
+                const imageKey = `image${activeImageIndex + 1}` as 'image1' | 'image2' | 'image3' | 'image4' | 'image5' | 'image6';
                 const samMasks = editedAnalysis?.samMasksByImage?.[imageKey];
                 const hasSAM = samMasks && samMasks.length > 0;
+                const isSatellite = activeImageIndex < 3; // Legacy markers only work on satellite views
 
                 // Helper to check if a SAM mask type should be shown based on toggles
                 const shouldShowSAMMask = (type: string) => {
@@ -405,10 +406,10 @@ export default function AIAnalysis({
 
                 return (
                   <div className={styles.featureMasks}>
-                    {/* --- LEGACY MARKERS (Fallback Only) --- */}
-                    {/* Only show these if SAM data is MISSING for this image */}
+                    {/* --- LEGACY MARKERS (Fallback Only - Satellite Only) --- */}
+                    {/* Only show these if SAM data is MISSING for this image AND it's a satellite view */}
                     
-                    {!hasSAM && (
+                    {!hasSAM && isSatellite && (
                       <>
                         {/* Lawn Area Mask - Generic Overlay */}
                         {showMasks.lawn && (editedAnalysis?.lawnSqft || 0) > 0 && (
