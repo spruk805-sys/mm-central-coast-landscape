@@ -64,7 +64,8 @@ export class SAMAgent implements HaulingAgent {
   }
   
   /**
-   * Segment an image using text prompts
+   * Segment an image using text prompts via Roboflow SAM API
+   * Note: Roboflow SAM requires specific endpoint format
    */
   async segmentWithText(
     imageBase64: string,
@@ -80,44 +81,74 @@ export class SAMAgent implements HaulingAgent {
     const results: SegmentationResult[] = [];
     
     try {
-      // Roboflow SAM API endpoint
-      const endpoint = `${this.baseUrl}/sam/segment`;
+      // Roboflow SAM2 endpoint with api_key as query param
+      // Using the segment_image endpoint for SAM
+      const endpoint = `https://infer.roboflow.com/sam2/segment_image?api_key=${this.apiKey}`;
       
       for (const prompt of prompts) {
         console.log(`[SAMAgent] Segmenting: "${prompt}"`);
         
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-          body: JSON.stringify({
-            image: `data:${mimeType};base64,${imageBase64}`,
-            prompt: prompt,
-            return_mask: true,
-          }),
-        });
-        
-        if (!response.ok) {
-          console.error(`[SAMAgent] API error for "${prompt}":`, response.status);
-          continue;
-        }
-        
-        const data = await response.json();
-        
-        if (data.masks && data.masks.length > 0) {
-          for (const mask of data.masks) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              image: {
+                type: 'base64',
+                value: imageBase64,
+              },
+              text_prompt: prompt,
+              multimask_output: false,
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[SAMAgent] API error for "${prompt}":`, response.status, errorText);
+            continue;
+          }
+          
+          const data = await response.json();
+          console.log(`[SAMAgent] Response for "${prompt}":`, JSON.stringify(data).substring(0, 200));
+          
+          // Handle various response formats
+          if (data.mask) {
             results.push({
               type: prompt,
-              mask: mask.mask_base64 || '',
-              maskUrl: mask.mask_url,
-              area: mask.area || 0,
-              percentage: mask.percentage || 0,
-              confidence: mask.confidence || 0.8,
-              bounds: mask.bounds || { x: 0, y: 0, w: 100, h: 100 },
+              mask: data.mask,
+              maskUrl: data.mask_url,
+              area: data.area || 0,
+              percentage: data.percentage || 0,
+              confidence: data.confidence || 0.8,
+              bounds: data.bounds || { x: 0, y: 0, w: 100, h: 100 },
+            });
+          } else if (data.masks && data.masks.length > 0) {
+            for (const mask of data.masks) {
+              results.push({
+                type: prompt,
+                mask: mask.mask || mask.mask_base64 || '',
+                maskUrl: mask.mask_url,
+                area: mask.area || 0,
+                percentage: mask.percentage || 0,
+                confidence: mask.confidence || 0.8,
+                bounds: mask.bounds || { x: 0, y: 0, w: 100, h: 100 },
+              });
+            }
+          } else if (data.segmentation) {
+            // Alternative format
+            results.push({
+              type: prompt,
+              mask: data.segmentation.mask || '',
+              area: data.segmentation.area || 0,
+              percentage: data.segmentation.percentage || 0,
+              confidence: data.segmentation.confidence || 0.8,
+              bounds: data.segmentation.bounds || { x: 0, y: 0, w: 100, h: 100 },
             });
           }
+        } catch (promptError) {
+          console.error(`[SAMAgent] Error for prompt "${prompt}":`, promptError);
         }
       }
       
