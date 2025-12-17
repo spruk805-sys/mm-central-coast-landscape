@@ -5,6 +5,8 @@ import Image from "next/image";
 import styles from "./AIAnalysis.module.css";
 import type { Coordinates } from "@/types";
 import type { PropertyAnalysis, FeatureLocation } from "@/types/property";
+import { ServiceType } from "@/services/site-manager/types";
+import MobileCameraFlow from "./MobileCameraFlow";
 
 interface AIAnalysisProps {
   coordinates: Coordinates;
@@ -20,9 +22,13 @@ export default function AIAnalysis({
   onSkip 
 }: AIAnalysisProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [serviceType, setServiceType] = useState<ServiceType>('landscaping');
+  const [mobileCameraMode, setMobileCameraMode] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<PropertyAnalysis | null>(null);
-  const [, setSatelliteUrl] = useState<string | null>(null);
+  const [satelliteUrl, setSatelliteUrl] = useState<string | null>(null);
+  const [enhancedUrl, setEnhancedUrl] = useState<string | null>(null);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [editedAnalysis, setEditedAnalysis] = useState<PropertyAnalysis | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showMasks, setShowMasks] = useState({
@@ -100,6 +106,7 @@ export default function AIAnalysis({
         formData.append("lat", coordinates.lat.toString());
         formData.append("lng", coordinates.lng.toString());
         formData.append("address", address);
+        formData.append("serviceType", serviceType);
         userPhotos.forEach(photo => formData.append("photos", photo));
         
         response = await fetch("/api/analyze-property", {
@@ -114,6 +121,7 @@ export default function AIAnalysis({
             lat: coordinates.lat,
             lng: coordinates.lng,
             address,
+            serviceType,
           }),
         });
       }
@@ -137,6 +145,25 @@ export default function AIAnalysis({
       setError(err instanceof Error ? err.message : "Failed to analyze property");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleEnhance = async () => {
+    if (!satelliteUrl) return;
+    setIsEnhancing(true);
+    try {
+        const res = await fetch('/api/site-manager/enhance', {
+            method: 'POST',
+            body: JSON.stringify({ imageUrl: satelliteUrl })
+        });
+        const data = await res.json();
+        if (data.url) {
+            setEnhancedUrl(data.url);
+        }
+    } catch (e) {
+        console.error("Failed to enhance:", e);
+    } finally {
+        setIsEnhancing(false);
     }
   };
 
@@ -204,6 +231,24 @@ export default function AIAnalysis({
           </p>
         </div>
 
+
+
+        {/* Service Type Toggle */}
+        <div className={styles.serviceToggle}>
+          <button 
+             className={`${styles.toggleBtn} ${serviceType === 'landscaping' ? styles.toggleActive : ''}`}
+             onClick={() => setServiceType('landscaping')}
+          >
+            🌿 Landscaping
+          </button>
+          <button 
+             className={`${styles.toggleBtn} ${serviceType === 'dump' ? styles.toggleActive : ''}`}
+             onClick={() => setServiceType('dump')}
+          >
+            🗑️ Junk Removal
+          </button>
+        </div>
+
         <div className={styles.imageCarousel}>
           <div className={styles.carouselMain}>
             <Image
@@ -236,10 +281,10 @@ export default function AIAnalysis({
           
           <div className={styles.photoButtons}>
             <button
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={() => setMobileCameraMode(true)}
               className={styles.cameraBtn}
             >
-              📷 Take Photo
+              📷 Guided Camera Scan
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -346,6 +391,19 @@ export default function AIAnalysis({
   // Results state with image carousel and editable values
   return (
     <div className={styles.container}>
+      {mobileCameraMode && (
+        <MobileCameraFlow 
+          serviceType={serviceType}
+          onCancel={() => setMobileCameraMode(false)}
+          onComplete={(photos) => {
+             const newPhotos = [...userPhotos, ...photos].slice(0, 6);
+             setUserPhotos(newPhotos);
+             setPhotoPreviews(newPhotos.map(f => URL.createObjectURL(f)));
+             setMobileCameraMode(false);
+          }}
+        />
+      )}
+
       {/* Confidence Banner */}
       <div 
         className={styles.confidenceBanner}
@@ -378,13 +436,61 @@ export default function AIAnalysis({
       {/* Image Carousel */}
       <div className={styles.imageCarousel}>
         <div className={styles.carouselMain}>
-          <Image
-            src={imageUrls[activeImageIndex].url}
-            alt={imageUrls[activeImageIndex].label}
-            width={500}
-            height={375}
-            className={styles.satelliteImage}
-          />
+          <div className="relative w-full h-full aspect-[4/3]">
+             {/* If enhanced, show split screen slider or toggle */}
+             {enhancedUrl && activeImageIndex === 0 ? (
+               <div className="relative w-full h-full group">
+                 {/* Underlying Enhanced Image */}
+                 <Image 
+                   src={enhancedUrl} 
+                   alt="Enhanced View"
+                   fill
+                   className="object-cover"
+                 />
+                 
+                 {/* Overlay Original Image (clipped) */}
+                 <div 
+                   className="absolute top-0 left-0 h-full w-1/2 overflow-hidden border-r-2 border-white/50"
+                   style={{ width: '50%', transition: 'width 0.1s' }}
+                 >
+                    <Image 
+                      src={imageUrls[activeImageIndex].url}
+                      alt="Original View"
+                      fill
+                      className="object-cover object-left"
+                    />
+                 </div>
+                 <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">Original</div>
+                 <div className="absolute top-2 right-2 bg-emerald-600/80 text-white text-xs px-2 py-1 rounded">✨ Enhanced</div>
+               </div>
+             ) : (
+                <Image
+                  src={imageUrls[activeImageIndex].url}
+                  alt={imageUrls[activeImageIndex].label}
+                  fill
+                  className={`${styles.satelliteImage} object-cover`}
+                />
+             )}
+             
+             {/* Enhance Button (Only for satellite view 0 for now) */}
+             {activeImageIndex === 0 && !enhancedUrl && (
+               <button
+                 onClick={handleEnhance}
+                 disabled={isEnhancing}
+                 className="absolute bottom-4 right-4 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-bold transition-all z-20"
+               >
+                 {isEnhancing ? (
+                   <>
+                     <span className="animate-spin">⏳</span> Enhancing...
+                   </>
+                 ) : (
+                   <>
+                     ✨ Enhance Clarity
+                   </>
+                 )}
+               </button>
+             )}
+          </div>
           
               {/* Visual Feature Masks - Show on satellite views using per-image coordinates */}
               {activeImageIndex < 6 && (() => {
@@ -784,12 +890,42 @@ export default function AIAnalysis({
       {/* AI Notes */}
       {editedAnalysis?.notes && editedAnalysis.notes.length > 0 && (
         <div className={styles.notes}>
-          <h4>🤖 AI Observations:</h4>
-          <ul>
-            {editedAnalysis.notes.map((note, i) => (
-              <li key={i}>{note}</li>
-            ))}
-          </ul>
+          <h4>🤖 AI Observations & Inferred Items:</h4>
+          
+          {/* Item Approval Checklist */}
+          {editedAnalysis.notes.some(n => n.includes('Item learned:') || n.includes('Verified')) ? (
+             <div className={styles.itemApprovalList}>
+                <p className={styles.itemApprovalTitle}>Please confirm the items we detected:</p>
+                <div className={styles.approvalGrid}>
+                  {editedAnalysis.notes
+                    .filter(note => !note.startsWith('[') && !note.includes('Verified')) // Filter out debug logs
+                    .map((item, i) => (
+                    <label key={i} className={styles.approvalItem}>
+                      <input 
+                        type="checkbox" 
+                        defaultChecked={true}
+                        onChange={(e) => {
+                           if (!editedAnalysis) return;
+                           // If unchecked, remove from notes implementation
+                           // This is a simple MVP toggle
+                           if (!e.target.checked) {
+                              const newNotes = editedAnalysis.notes.filter((_, idx) => idx !== i);
+                              setEditedAnalysis({ ...editedAnalysis, notes: newNotes });
+                           }
+                        }}
+                      />
+                      <span className={styles.approvalText}>{item.replace(/^-\s*/, '')}</span>
+                    </label>
+                  ))}
+                </div>
+             </div>
+          ) : (
+            <ul>
+                {editedAnalysis.notes.map((note, i) => (
+                <li key={i}>{note}</li>
+                ))}
+            </ul>
+          )}
         </div>
       )}
 

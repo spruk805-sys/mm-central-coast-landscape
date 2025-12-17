@@ -48,6 +48,34 @@ export interface AnalysisResult {
   cost?: number;
 }
 
+export type ServiceType = 'landscaping' | 'dump';
+
+export interface DetectedItem {
+  id: string;
+  label: string;
+  confidence: number;
+  box?: [number, number, number, number]; // [x, y, w, h]
+  mask?: string; // polygon string
+  service: ServiceType;
+}
+
+export interface VideoAnalysisResult {
+    videoId: string;
+    items: DetectedItem[];
+    summary: string;
+    processingTime: number;
+}
+
+export interface ProviderMetrics {
+  requests: number;
+  errors: number;
+  avgLatency: number;
+  lastError?: string;
+  lastErrorAt?: Date;
+  totalTokens?: number;
+  totalCost?: number;
+}
+
 // Metrics for monitoring
 export interface Metrics {
   totalRequests: number;
@@ -60,13 +88,9 @@ export interface Metrics {
     errors: number;
     avgLatency: number;
   };
-  byProvider: Record<AIProvider, {
-    requests: number;
-    errors: number;
-    avgLatency: number;
-    lastError?: string;
-    lastErrorAt?: Date;
-  }>;
+  byProvider: Record<AIProvider, ProviderMetrics>;
+  totalTokens?: number;
+  totalCost?: number;
 }
 
 // Site Manager configuration
@@ -93,6 +117,8 @@ export interface SystemStatus {
   metrics: Metrics;
   uptime: number;
   startedAt: Date;
+  videoStatus?: { healthy: boolean; details: any };
+  upscaleStatus?: { healthy: boolean; details: any };
 }
 
 // Agent interface - all agents implement this

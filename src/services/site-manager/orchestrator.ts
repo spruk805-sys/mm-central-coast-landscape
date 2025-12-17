@@ -153,7 +153,16 @@ export class OrchestratorAgent implements Agent {
       
       // Record success
       const latency = Date.now() - startTime;
-      this.monitor.recordRequest(provider, latency, true);
+      
+      // Calculate metrics
+      const tokens = result.tokenUsage ? (result.tokenUsage.input + result.tokenUsage.output) : 0;
+      const modelConfig = this.getModelConfig(provider);
+      const cost = tokens > 0 && modelConfig ? (tokens / 1000) * modelConfig.costPer1kTokens : 0;
+      
+      // Add cost to result if available
+      if (typeof result.cost === 'undefined') result.cost = cost;
+
+      this.monitor.recordRequest(provider, latency, true, tokens, cost);
       
       return result;
       

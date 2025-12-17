@@ -3,6 +3,7 @@
  * Routes image analysis to AI models for item detection
  */
 
+import { getSAMAgent } from '../site-manager/sam-agent';
 import { HaulingAgent, HaulingAnalysisRequest } from './types';
 
 export class ItemOrchestratorAgent implements HaulingAgent {
@@ -32,7 +33,7 @@ export class ItemOrchestratorAgent implements HaulingAgent {
   }
   
   /**
-   * Analyze images using Gemini
+   * Analyze images using Gemini, augmented by SAM 3 segmentation
    */
   async analyzeImages(request: HaulingAnalysisRequest): Promise<any[]> {
     const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
@@ -40,7 +41,52 @@ export class ItemOrchestratorAgent implements HaulingAgent {
     
     const startTime = Date.now();
     
-    const prompt = this.buildPrompt(request.description);
+    // 1. Run SAM 3 Segmentation First
+    let samSummary = '';
+    try {
+        const samAgent = getSAMAgent();
+        const samStatus = samAgent.getStatus();
+        
+        if (samStatus.healthy) {
+            console.log('[ItemOrchestrator] Running SAM 3 pre-detection on dump images...');
+            const junkPrompts = [
+                'trash bag garbage', 
+                'cardboard box', 
+                'furniture couch chair sofa', 
+                'mattress bed', 
+                'appliance refrigerator washer dryer', 
+                'wood debris lumber', 
+                'metal scrap', 
+                'tire wheel',
+                'electronic tv computer'
+            ];
+
+            // Process strictly the first 3 images to save time/limits
+            const samResults = await Promise.all(
+                request.images.slice(0, 3).map(async (img) => {
+                    return samAgent.segmentWithText(img.data, junkPrompts, img.mime);
+                })
+            );
+
+            // Aggregate counts
+            const counts: Record<string, number> = {};
+            samResults.flat().forEach(mask => {
+                counts[mask.type] = (counts[mask.type] || 0) + 1;
+            });
+            
+            if (Object.keys(counts).length > 0) {
+                samSummary = Object.entries(counts)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join(', ');
+                console.log(`[ItemOrchestrator] SAM detected: ${samSummary}`);
+            }
+        }
+    } catch (err) {
+        console.warn('[ItemOrchestrator] SAM pre-detection failed (non-blocking):', err);
+    }
+
+    // 2. Build Prompt with SAM context
+    const prompt = this.buildPrompt(request.description, samSummary);
     
     const parts: any[] = [{ text: prompt }];
     
@@ -90,10 +136,12 @@ export class ItemOrchestratorAgent implements HaulingAgent {
   /**
    * Build analysis prompt
    */
-  private buildPrompt(description?: string): string {
+  private buildPrompt(description?: string, samSummary?: string): string {
     return `You are an expert junk removal specialist. Analyze these images of items to be hauled away.
 
 ${description ? `Customer notes: ${description}` : ''}
+
+${samSummary ? `[AUTOMATED SEGMENTATION] We have pre-scanned the images and detected: ${samSummary}. Please use these counts as a baseline validation.` : ''}
 
 For each distinct item or pile, provide:
 - name: Item name/description

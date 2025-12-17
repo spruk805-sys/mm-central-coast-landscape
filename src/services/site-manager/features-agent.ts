@@ -7,9 +7,13 @@
 import { Agent, AnalysisResult } from './types';
 
 // Feature types we track
+// Feature types we track
 export type FeatureType = 
+  // Landscaping
   | 'tree' | 'bush' | 'pool' | 'fence' | 'driveway' 
-  | 'pathway' | 'garden_bed' | 'lawn' | 'patio' | 'shed';
+  | 'pathway' | 'garden_bed' | 'lawn' | 'patio' | 'shed'
+  // Dump / Junk
+  | 'mattress' | 'furniture' | 'appliance' | 'box_pile' | 'trash_bag' | 'construction_debris' | 'tire';
 
 export interface DetectedFeature {
   type: FeatureType;
@@ -17,6 +21,7 @@ export interface DetectedFeature {
   location?: { x: number; y: number; w: number; h: number };
   source: 'gemini' | 'openai' | 'consensus';
   notes?: string;
+  service?: 'landscaping' | 'dump';
 }
 
 export interface FeatureValidation {
@@ -27,17 +32,27 @@ export interface FeatureValidation {
 }
 
 // Expected ranges for features based on property size
-const FEATURE_RANGES: Record<FeatureType, { min: number; max: number; perAcre?: number }> = {
-  tree: { min: 0, max: 100, perAcre: 50 },
-  bush: { min: 0, max: 200, perAcre: 100 },
-  pool: { min: 0, max: 3 },
-  fence: { min: 0, max: 2000 }, // feet
-  driveway: { min: 0, max: 1 },
-  pathway: { min: 0, max: 5000 }, // sqft
-  garden_bed: { min: 0, max: 20 },
-  lawn: { min: 0, max: 500000 }, // sqft
-  patio: { min: 0, max: 3 },
-  shed: { min: 0, max: 5 },
+const FEATURE_RANGES: Record<FeatureType, { min: number; max: number; perAcre?: number; service: 'landscaping' | 'dump' }> = {
+  // Landscaping
+  tree: { min: 0, max: 100, perAcre: 50, service: 'landscaping' },
+  bush: { min: 0, max: 200, perAcre: 100, service: 'landscaping' },
+  pool: { min: 0, max: 3, service: 'landscaping' },
+  fence: { min: 0, max: 2000, service: 'landscaping' }, // feet
+  driveway: { min: 0, max: 1, service: 'landscaping' },
+  pathway: { min: 0, max: 5000, service: 'landscaping' }, // sqft
+  garden_bed: { min: 0, max: 20, service: 'landscaping' },
+  lawn: { min: 0, max: 500000, service: 'landscaping' }, // sqft
+  patio: { min: 0, max: 3, service: 'landscaping' },
+  shed: { min: 0, max: 5, service: 'landscaping' },
+
+  // Dump
+  mattress: { min: 0, max: 10, service: 'dump' },
+  furniture: { min: 0, max: 20, service: 'dump' },
+  appliance: { min: 0, max: 10, service: 'dump' },
+  box_pile: { min: 0, max: 20, service: 'dump' },
+  trash_bag: { min: 0, max: 50, service: 'dump' },
+  construction_debris: { min: 0, max: 5, service: 'dump' }, // piles
+  tire: { min: 0, max: 20, service: 'dump' },
 };
 
 export class FeaturesAgent implements Agent {
@@ -87,6 +102,7 @@ export class FeaturesAgent implements Agent {
         confidence: result.confidence,
         source: result.provider as any,
         notes: `Count: ${analysis.treeCount}`,
+        service: 'landscaping'
       });
     }
     
@@ -96,6 +112,7 @@ export class FeaturesAgent implements Agent {
         confidence: result.confidence,
         source: result.provider as any,
         notes: `Count: ${analysis.bushCount}`,
+        service: 'landscaping'
       });
     }
     
@@ -105,6 +122,58 @@ export class FeaturesAgent implements Agent {
         confidence: result.confidence,
         source: result.provider as any,
         notes: `Count: ${analysis.gardenBeds}`,
+        service: 'landscaping'
+      });
+    }
+
+    // --- DUMP / JUNK FEATURES ---
+    if (analysis.mattressCount > 0) {
+      features.push({
+        type: 'mattress',
+        confidence: result.confidence,
+        source: result.provider as any,
+        notes: `Count: ${analysis.mattressCount}`,
+        service: 'dump'
+      });
+    }
+
+    if (analysis.furnitureCount > 0) {
+      features.push({
+        type: 'furniture',
+        confidence: result.confidence,
+        source: result.provider as any,
+        notes: `Count: ${analysis.furnitureCount}`,
+        service: 'dump'
+      });
+    }
+
+    if (analysis.applianceCount > 0) {
+      features.push({
+        type: 'appliance',
+        confidence: result.confidence,
+        source: result.provider as any,
+        notes: `Count: ${analysis.applianceCount}`,
+        service: 'dump'
+      });
+    }
+    
+    if (analysis.trashBagCount > 0) {
+      features.push({
+        type: 'trash_bag',
+        confidence: result.confidence,
+        source: result.provider as any,
+        notes: `Count: ${analysis.trashBagCount}`,
+        service: 'dump'
+      });
+    }
+
+    if (analysis.debrisPiles > 0) {
+      features.push({
+        type: 'construction_debris',
+        confidence: result.confidence,
+        source: result.provider as any,
+        notes: `Count: ${analysis.debrisPiles}`,
+        service: 'dump'
       });
     }
     

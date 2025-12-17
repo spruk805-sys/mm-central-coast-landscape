@@ -27,11 +27,13 @@ export class MonitorAgent implements Agent {
       rateLimitHits: 0,
       lastHour: { requests: 0, errors: 0, avgLatency: 0 },
       byProvider: {
-        gemini: { requests: 0, errors: 0, avgLatency: 0 },
-        openai: { requests: 0, errors: 0, avgLatency: 0 },
-        claude: { requests: 0, errors: 0, avgLatency: 0 },
-        local: { requests: 0, errors: 0, avgLatency: 0 },
+        gemini: { requests: 0, errors: 0, avgLatency: 0, totalTokens: 0, totalCost: 0 },
+        openai: { requests: 0, errors: 0, avgLatency: 0, totalTokens: 0, totalCost: 0 },
+        claude: { requests: 0, errors: 0, avgLatency: 0, totalTokens: 0, totalCost: 0 },
+        local: { requests: 0, errors: 0, avgLatency: 0, totalTokens: 0, totalCost: 0 },
       },
+      totalTokens: 0,
+      totalCost: 0,
     };
   }
   
@@ -60,7 +62,7 @@ export class MonitorAgent implements Agent {
   }
   
   // Record a completed request
-  recordRequest(provider: AIProvider, latencyMs: number, success: boolean, error?: string): void {
+  recordRequest(provider: AIProvider, latencyMs: number, success: boolean, tokens = 0, cost = 0, error?: string): void {
     this.metrics.totalRequests++;
     
     if (success) {
@@ -72,6 +74,10 @@ export class MonitorAgent implements Agent {
     // Update average latency (running average)
     this.metrics.averageLatencyMs = 
       (this.metrics.averageLatencyMs * (this.metrics.totalRequests - 1) + latencyMs) / this.metrics.totalRequests;
+      
+    // Update global cost/tokens
+    this.metrics.totalTokens = (this.metrics.totalTokens || 0) + tokens;
+    this.metrics.totalCost = (this.metrics.totalCost || 0) + cost;
     
     // Update provider-specific metrics
     const providerMetrics = this.metrics.byProvider[provider];
@@ -83,6 +89,10 @@ export class MonitorAgent implements Agent {
     }
     providerMetrics.avgLatency = 
       (providerMetrics.avgLatency * (providerMetrics.requests - 1) + latencyMs) / providerMetrics.requests;
+      
+    // Update provider cost/tokens
+    providerMetrics.totalTokens = (providerMetrics.totalTokens || 0) + tokens;
+    providerMetrics.totalCost = (providerMetrics.totalCost || 0) + cost;
     
     // Add to hourly bucket
     this.addToHourlyBucket(success ? 0 : 1, latencyMs);

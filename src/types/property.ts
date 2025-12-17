@@ -1,6 +1,6 @@
 
 export interface FeatureLocation {
-  type: 'tree' | 'bush' | 'pool' | 'shed' | 'fence' | 'roof' | 'lawn' | 'path';
+  type: string;
   x: number; // 0-100 percentage from left
   y: number; // 0-100 percentage from top
   w?: number; // width %
@@ -24,6 +24,7 @@ export interface PropertyAnalysis {
     image1?: FeatureLocation[];
     image2?: FeatureLocation[];
     image3?: FeatureLocation[];
+    userPhotos?: FeatureLocation[];
   };
   samMasksByImage?: {
     image1?: {

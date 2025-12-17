@@ -17,6 +17,7 @@ import { OrchestratorAgent } from './orchestrator';
 import { AutoScalerAgent } from './auto-scaler';
 import { QualityAgent } from './quality-agent';
 import { FeaturesAgent } from './features-agent';
+import { UpscaleAgent } from './upscale-agent';
 
 // AI API Executors
 async function executeGemini(request: AnalysisRequest): Promise<any> {
@@ -50,7 +51,10 @@ async function executeGemini(request: AnalysisRequest): Promise<any> {
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('Empty response from Gemini');
 
-  return parseAIResponse(text);
+  const usage = data.usageMetadata;
+  const analysis = parseAIResponse(text);
+  
+  return { ...analysis, usage: { input: usage?.promptTokenCount || 0, output: usage?.candidatesTokenCount || 0 } };
 }
 
 async function executeOpenAI(request: AnalysisRequest): Promise<any> {
@@ -86,7 +90,10 @@ async function executeOpenAI(request: AnalysisRequest): Promise<any> {
   if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
 
   const data = await res.json();
-  return parseAIResponse(data.choices[0].message.content);
+  const analysis = parseAIResponse(data.choices[0].message.content);
+  const usage = data.usage;
+  
+  return { ...analysis, usage: { input: usage?.prompt_tokens || 0, output: usage?.completion_tokens || 0 } };
 }
 
 function buildPrompt(request: AnalysisRequest): string {
@@ -145,10 +152,17 @@ const DEFAULT_CONFIG: SiteManagerConfig = {
   logLevel: 'info',
 };
 
+import { VideoAgent } from './video-agent';
+
+// ... imports ...
+
 export class SiteManager {
   private config: SiteManagerConfig;
   private monitor: MonitorAgent;
   private orchestrator: OrchestratorAgent;
+  private autoScaler: AutoScalerAgent;
+  private upscaleAgent: UpscaleAgent;
+  private videoAgent: VideoAgent;
   private startedAt: Date;
   private isRunning = false;
 
@@ -166,6 +180,21 @@ export class SiteManager {
       { models: this.config.models, maxConcurrent: this.config.maxConcurrent },
       this.monitor
     );
+    
+    // Initialize AutoScaler
+    this.autoScaler = new AutoScalerAgent({ maxConcurrent: this.config.maxConcurrent });
+    
+    // Initialize UpscaleAgent
+    this.upscaleAgent = new UpscaleAgent({ enabled: true });
+    
+    // Initialize VideoAgent
+    this.videoAgent = new VideoAgent();
+
+    // Wire AutoScaler to Orchestrator
+    this.autoScaler.setExecutor(async (request) => {
+      const executor = this.createExecutor();
+      return this.orchestrator.executeWithFallback(request, executor);
+    });
   }
 
   /**
@@ -177,6 +206,9 @@ export class SiteManager {
     console.log('[SiteManager] Starting...');
     await this.monitor.start();
     await this.orchestrator.start();
+    await this.autoScaler.start();
+    await this.upscaleAgent.start();
+    await this.videoAgent.start();
     this.isRunning = true;
     console.log('[SiteManager] Started successfully');
   }
@@ -190,6 +222,9 @@ export class SiteManager {
     console.log('[SiteManager] Stopping...');
     await this.orchestrator.stop();
     await this.monitor.stop();
+    await this.autoScaler.stop();
+    await this.upscaleAgent.stop();
+    await this.videoAgent.stop();
     this.isRunning = false;
   }
 
@@ -219,11 +254,8 @@ export class SiteManager {
 
     console.log(`[SiteManager] Analyzing property: ${params.address} (${request.id})`);
 
-    // Execute with orchestrator (automatic fallback)
-    const result = await this.orchestrator.executeWithFallback(
-      request,
-      this.createExecutor()
-    );
+    // Execute with AutoScaler (queuing + fallback via orchestrator)
+    const result = await this.autoScaler.submit(request);
 
     // Check quality threshold
     if (
@@ -235,6 +267,20 @@ export class SiteManager {
     }
 
     return result;
+  }
+
+  /**
+   * Analyze a video stream for specific items
+   */
+  async analyzeVideo(url: string, service: 'landscaping' | 'dump'): Promise<any> {
+    return this.videoAgent.analyzeVideo(url, service);
+  }
+
+  /**
+   * Enhance an image using the UpscaleAgent
+   */
+  async enhanceImage(url: string): Promise<string> {
+    return this.upscaleAgent.upscaleImage(url);
   }
 
   private createExecutor() {
@@ -254,13 +300,14 @@ export class SiteManager {
         throw new Error(`Unsupported provider: ${provider}`);
       }
 
-      return {
+        return {
         requestId: request.id,
         provider,
         model: provider === 'gemini' ? 'gemini-2.0-flash' : 'gpt-4o',
         analysis,
         confidence: analysis.confidence || 0.7,
         latencyMs: Date.now() - startTime,
+        tokenUsage: analysis.usage,
       };
     };
   }
@@ -271,13 +318,16 @@ export class SiteManager {
   getStatus(): SystemStatus {
     const monitorStatus = this.monitor.getStatus();
     const orchestratorStatus = this.orchestrator.getStatus();
+    const autoScalerStatus = this.autoScaler.getStatus();
     const metrics = this.monitor.getMetrics();
 
     return {
-      healthy: monitorStatus.healthy && orchestratorStatus.healthy,
+      healthy: monitorStatus.healthy && orchestratorStatus.healthy && this.upscaleAgent.getStatus().healthy && this.videoAgent.getStatus().healthy,
       status: monitorStatus.healthy ? 'healthy' : 'degraded',
       activeWorkers: orchestratorStatus.details.activeRequests,
-      queueDepth: 0, // TODO: Implement queue in Phase 2
+      upscaleStatus: this.upscaleAgent.getStatus(),
+      videoStatus: this.videoAgent.getStatus(),
+      queueDepth: autoScalerStatus.details.queueDepth,
       providers: {
         gemini: {
           status: this.monitor.getProviderHealth('gemini'),

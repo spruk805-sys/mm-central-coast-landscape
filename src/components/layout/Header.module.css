@@ -213,7 +213,10 @@
     align-items: center;
     opacity: 0;
     visibility: hidden;
+    visibility: hidden;
     transition: all var(--transition-base);
+    z-index: 9;
+    overflow-y: auto;
   }
 
   .nav.navOpen {

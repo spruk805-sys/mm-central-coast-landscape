@@ -14,7 +14,7 @@ interface ServiceSelectorProps {
 const services = [
   {
     id: 'lawn-maintenance',
-    icon: '/images/lawn-service.png',
+    icon: '/images/icon-lawn-grass.png',
     name: 'Lawn Maintenance',
     description: 'Regular mowing, edging, and blowing for a pristine yard.',
     popular: true,
@@ -22,7 +22,7 @@ const services = [
   },
   {
     id: 'tree-trimming',
-    icon: '/images/tree-service.png',
+    icon: '/images/icon-tree.png',
     name: 'Tree Trimming',
     description: 'Expert pruning to promote health and aesthetics.',
     popular: true,
@@ -30,7 +30,7 @@ const services = [
   },
   {
     id: 'bush-trimming',
-    icon: '/images/bush-service.png',
+    icon: '/images/icon-bush.png',
     name: 'Bush & Shrub Care',
     description: 'Hedge trimming and shrub maintenance.',
     popular: false,
@@ -38,7 +38,7 @@ const services = [
   },
   {
     id: 'sprinkler-repair',
-    icon: '/images/irrigation-service.png',
+    icon: '/images/icon-irrigation-sprinkler.png',
     name: 'Irrigation Services',
     description: 'Diagnosis, repair, and system management.',
     popular: false,
@@ -46,7 +46,7 @@ const services = [
   },
   {
     id: 'garden-design',
-    icon: '/images/garden-service.png',
+    icon: '/images/icon-garden-flowers.png',
     name: 'Garden & Planting',
     description: 'Design, seasonal color, and bed care.',
     popular: true,
@@ -54,7 +54,7 @@ const services = [
   },
   {
     id: 'hardscaping',
-    icon: '/images/hardscape-service.png',
+    icon: '/images/icon-hardscape-stones.png',
     name: 'Hardscaping',
     description: 'Patios, walkways, and retaining walls.',
     popular: true,
@@ -62,7 +62,7 @@ const services = [
   },
   {
     id: 'sod-installation',
-    icon: '/images/sod-service.png',
+    icon: '/images/icon-sod-roll.png',
     name: 'Sod Installation',
     description: 'Instant lawn transformation with premium sod.',
     popular: false,
@@ -70,7 +70,7 @@ const services = [
   },
   {
     id: 'fence-repair',
-    icon: '/images/fence-service.png',
+    icon: '/images/icon-fence.png',
     name: 'Fence Services',
     description: 'Installation and repair of fences and gates.',
     popular: false,
@@ -78,7 +78,7 @@ const services = [
   },
   {
     id: 'cleanup',
-    icon: '/images/cleanup-service.png',
+    icon: '/images/icon-cleanup-rake.png',
     name: 'Yard Cleanup',
     description: 'Leaf removal, debris clearing, and deep cleaning.',
     popular: false,
@@ -86,7 +86,7 @@ const services = [
   },
   {
     id: 'trashcaddy',
-    icon: '/images/trash-bin.png',
+    icon: '/images/icon-trash-bin.png',
     name: 'TrashCaddy',
     description: 'Trash cans to curb & back.',
     popular: false,
@@ -94,7 +94,7 @@ const services = [
   },
   {
     id: 'trashcaddy-return',
-    icon: '/images/trash-bin.png',
+    icon: '/images/icon-trash-bin.png',
     name: 'TrashCaddy + Return',
     description: 'Full service: to curb & return.',
     popular: true,

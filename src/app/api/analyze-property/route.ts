@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runConsensusAnalysis } from "@/services/ai-consensus";
-
-
+import { ServiceRouter } from "@/services/service-router";
+import { ServiceType } from "@/services/site-manager/types";
 
 export async function POST(request: NextRequest) {
   try {
     let lat: number, lng: number, address: string;
     let userPhotos: File[] = [];
+    let serviceType: ServiceType = 'landscaping';
     
     // Check if request is FormData (has user photos) or JSON
     const contentType = request.headers.get("content-type") || "";
@@ -17,13 +18,15 @@ export async function POST(request: NextRequest) {
       lng = parseFloat(formData.get("lng") as string);
       address = formData.get("address") as string || "";
       userPhotos = formData.getAll("photos") as File[];
-      console.log("[AI Analysis] FormData request with", userPhotos.length, "user photos");
+      serviceType = (formData.get("serviceType") as ServiceType) || 'landscaping';
+      console.log("[AI Analysis] FormData request with", userPhotos.length, "user photos", "Service:", serviceType);
     } else {
       const json = await request.json();
       lat = json.lat;
       lng = json.lng;
       address = json.address;
-      console.log("[AI Analysis] JSON request");
+      serviceType = json.serviceType || 'landscaping';
+      console.log("[AI Analysis] JSON request", "Service:", serviceType);
     }
     
     console.log("[AI Analysis] Starting analysis for:", { lat, lng, address, userPhotoCount: userPhotos.length });
@@ -319,7 +322,8 @@ export async function POST(request: NextRequest) {
             parcelData: parcelData,
             satelliteImages: satelliteImages,
             streetViewImages: streetIds,
-            userPhotos: processedUserPhotos
+            userPhotos: processedUserPhotos,
+            serviceType: serviceType
         });
     } catch (error) {
         console.error("[API] Consensus Analysis failed:", error);
@@ -332,10 +336,15 @@ export async function POST(request: NextRequest) {
          throw error;
     }
 
+    // Route result through ServiceRouter
+    const serviceRouter = new ServiceRouter();
+    const serviceResult = await serviceRouter.routeAnalysis(aiResult.analysis, serviceType, address);
+
     return NextResponse.json({
       success: true,
       provider: aiResult.provider,
       analysis: aiResult.analysis,
+      serviceResult: serviceResult,
       imageUrl: satelliteCloseUrl,
       parcel: parcelData ? {
         apn: parcelData.apn,

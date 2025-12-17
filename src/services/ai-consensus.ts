@@ -18,6 +18,8 @@ interface ParcelData {
   };
 }
 
+import { ServiceType } from "./site-manager/types";
+
 export interface AIAnalysisConfig {
   address: string;
   lat: number;
@@ -26,6 +28,7 @@ export interface AIAnalysisConfig {
   satelliteImages: { mime: string; data: string; label: string }[];
   streetViewImages: { mime: string; data: string; label: string }[];
   userPhotos: { mime: string; data: string; label: string }[]; // Base64 strings
+  serviceType?: ServiceType;
 }
 
 // Parse AI JSON response
@@ -164,41 +167,47 @@ export const runConsensusAnalysis = async (config: AIAnalysisConfig): Promise<{ 
 
   const startTime = Date.now();
   const allImages = [...config.satelliteImages, ...config.streetViewImages, ...config.userPhotos];
+  const isDumpService = config.serviceType === 'dump';
   
   // ========== STEP 1: RUN SAM 3 FIRST ==========
-  // This gives us precise segmentation that helps AI understand property features
-  console.log('[Consensus] STEP 1: Running SAM 3 segmentation first...');
+  console.log(`[Consensus] STEP 1: Running SAM 3 segmentation first (Service: ${config.serviceType || 'landscaping'})...`);
   
   let samMasksByImage: PropertyAnalysis['samMasksByImage'] = undefined;
   let samSummary = '';
   
   try {
     const samAgent = getSAMAgent();
+    
+    // Select prompts based on Service Type
+    let samPrompts: string[] = [];
+    if (isDumpService) {
+      samPrompts = [
+         'trash pile', 'debris', 'furniture', 'mattress', 'cardboard box', 
+         'appliance', 'couch', 'chair', 'scrap metal', 'wood planks', 
+         'garbage bag', 'dumpster'
+      ];
+    } else {
+      samPrompts = [
+        'lawn grass', 'tree', 'bush shrub', 'swimming pool', 'fence', 
+        'driveway', 'patio deck', 'garden bed', 'pathway walkway', 
+        'shed', 'roof house', 'solar panel'
+      ];
+    }
+
     const samStatus = samAgent.getStatus();
     
-    if (samStatus.healthy && config.satelliteImages.length >= 3) {
-      // Detect EVERYTHING - we'll filter to property boundary later
-      const samPrompts = [
-        'lawn grass',
-        'tree',
-        'bush shrub',
-        'swimming pool',
-        'fence',
-        'driveway',
-        'patio deck',
-        'garden bed',
-        'pathway walkway',
-        'shed',
-        'roof house',
-        'solar panel', // For solar panel cleaning service
-      ];
-      
-      // Process all 3 satellite images in parallel
+    // We run SAM on User Photos for Dump services (features are usually close-ups), 
+    // Satellite interactions for Landscaping.
+    const imagesToSegment = isDumpService ? config.userPhotos : config.satelliteImages.slice(0, 3);
+    
+    if (samStatus.healthy && imagesToSegment.length > 0) {
+      // Process images in parallel
       const samResults = await Promise.all(
-        config.satelliteImages.slice(0, 3).map(async (img, idx) => {
-          console.log(`[Consensus] SAM processing image ${idx + 1}...`);
+        imagesToSegment.map(async (img, idx) => {
+          const imgKey = isDumpService ? `user${idx}` : `image${idx + 1}`;
+          console.log(`[Consensus] SAM processing ${imgKey}...`);
           const masks = await samAgent.segmentWithText(img.data, samPrompts, img.mime);
-          return { imageKey: `image${idx + 1}` as 'image1' | 'image2' | 'image3', masks };
+          return { imageKey: imgKey, masks };
         })
       );
       
@@ -209,6 +218,7 @@ export const runConsensusAnalysis = async (config: AIAnalysisConfig): Promise<{ 
       
       for (const result of samResults) {
         if (result.masks.length > 0) {
+          // @ts-ignore - dynamic key assignment
           samMasksByImage[result.imageKey] = result.masks;
           totalMasks += result.masks.length;
           // Count detected features
@@ -226,9 +236,10 @@ export const runConsensusAnalysis = async (config: AIAnalysisConfig): Promise<{ 
         samSummary = `
 **SAM 3 PRE-DETECTION RESULTS:**
 ✅ Automated segmentation detected: ${featureList}
-🎯 These are pixel-accurate masks - use them to validate your counts.
-⚠️ SAM may detect neighbor's features too - cross-check with parcel boundary!`;
+🎯 These are pixel-accurate masks - use them to validate your counts.`;
         console.log(`[Consensus] SAM 3 detected: ${featureList}`);
+      } else {
+        samSummary = `**SAM 3 RESULTS:** No specific features detected from prompt list.`;
       }
     }
   } catch (samError) {
@@ -249,7 +260,32 @@ export const runConsensusAnalysis = async (config: AIAnalysisConfig): Promise<{ 
 `
     : `**PARCEL BOUNDARY:** No exact data. Estimate from visual landmarks.`;
 
-  const analysisPrompt = `You are an expert landscaping property analyst. Analyze the following ${allImages.length} images of a SINGLE property.
+  let analysisPrompt = '';
+
+  if (isDumpService) {
+      analysisPrompt = `You are an expert junk removal estimator. Analyze these ${allImages.length} images to estimate a hauling quote.
+
+**CONTEXT:**
+Address: ${config.address || "Unknown"}
+${samSummary}
+
+**INSTRUCTIONS:**
+1. **Identify Items**: Look for trash, furniture, appliances, debris, yard waste.
+2. **Volumetric Estimate**: Estimate the total volume in cubic yards. (1 Pickup Truck = 2 cu yards).
+3. **Consensus**: Use SAM 3 detections above to confirm items. If SAM sees "mattress", count it.
+
+**REQUIRED JSON OUTPUT:**
+{
+  "imageObservations": { "userPhotos": "List specific items found..." },
+  "locationsByImage": { "image1": [] },
+  "lawnSqft": 0, "treeCount": 0, "bushCount": 0, "hasPool": false, "hasFence": false,
+  "fenceLength": 0, "pathwaySqft": 0, "gardenBeds": 0, "drivewayPresent": false,
+  "confidence": <0.0-1.0>,
+  "notes": ["Item 1: [Name] - [Vol] cu ft", "Item 2: [Name]..."]
+}`;
+  } else {
+      analysisPrompt = `You are an expert landscaping property analyst. Analyze the following ${allImages.length} images of a SINGLE property.
+
 
 **PROPERTY:**
 Address: ${config.address || "Unknown"}
@@ -272,7 +308,12 @@ ${samSummary}
    - If a feature (e.g., Pool) appears in Image 3 (Wide) but NOT in Image 1 (Close), it's outside the property — IGNORE IT.
    - For Street View: Focus ONLY on the property at the center, ignore houses across the street.
 
-4. **Consensus with SAM**: If SAM detected features, validate which are INSIDE the property boundary.
+4. **Consensus with SAM 3 (HIGH PRIORITY)**:
+   - You have been provided with **SAM 3 PRE-DETECTION RESULTS** above.
+   - These detections are PIXEL-ACCURATE. Trust them for the *existence* of features (e.g. if SAM says "Pool: 1", there IS a pool).
+   - Your job is to verify if these features are **INSIDE the property boundary**.
+   - If SAM detects 5 trees, but you only see 2 inside the Red Line, report **2**.
+   - If SAM detects "0 Pools", do not hallucinate a pool unless clearly visible.
 
 **REQUIRED JSON OUTPUT:**
 {
@@ -299,6 +340,8 @@ ${samSummary}
 - image3 = Medium Satellite (Zoom 19)
 - box_2d format: [ymin, xmin, ymax, xmax] on 0-1000 scale
 - Same feature should appear in ALL 3 images at correctly scaled positions`;
+
+  }
 
   // Build Gemini Parts (Interleaved text labels + images)
   const geminiParts: GeminiPart[] = [{ text: analysisPrompt }];

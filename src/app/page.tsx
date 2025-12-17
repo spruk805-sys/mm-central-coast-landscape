@@ -44,10 +44,34 @@ const services = [
     image: "/images/garden-service.png",
   },
   {
+    icon: "🚛",
+    title: "Junk Removal",
+    description: "Full-service hauling for furniture, appliances, and yard debris. We load, you relax.",
+    image: "/images/cleanup-service.png",
+  },
+  {
     icon: "🗑️",
     title: "TrashCaddy Service",
     description: "We bring your bins to the curb and back — never miss trash day again.",
     image: "/images/trash-bin.png",
+  },
+  {
+    icon: "☀️",
+    title: "Solar Panel Cleaning",
+    description: "Maximize your energy efficiency with professional, streak-free solar panel cleaning.",
+    image: "/images/solar-cleaning.png",
+  },
+  {
+    icon: "💧",
+    title: "Pressure Washing",
+    description: "Revitalize your driveway, patio, and walkways with high-power deep cleaning.",
+    image: "/images/pressure-washing.png",
+  },
+  {
+    icon: "🧼",
+    title: "Trash Bin Cleaning",
+    description: "Sanitize and deodorize your trash bins. We eliminate bacteria and bad smells.",
+    image: "/images/bin-cleaning.png",
   },
 ];
 
