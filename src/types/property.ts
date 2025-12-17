@@ -20,6 +20,14 @@ export interface PropertyAnalysis {
   confidence: number;
   notes: string[];
   locations?: FeatureLocation[]; // Legacy single-image format
+  
+  // Dump / Junk Counts
+  mattressCount?: number;
+  furnitureCount?: number;
+  applianceCount?: number;
+  trashBagCount?: number;
+  debrisPiles?: number;
+
   locationsByImage?: {
     image1?: FeatureLocation[];
     image2?: FeatureLocation[];

@@ -4,6 +4,7 @@
  */
 
 import { Agent, AnalysisResult, AnalysisRequest } from './types';
+import { PropertyAnalysis } from '@/types/property';
 
 interface QualityCheck {
   passed: boolean;
@@ -74,7 +75,7 @@ export class QualityAgent implements Agent {
     }
     
     // Check 2: Missing critical fields
-    const analysis = result.analysis;
+    const analysis = result.analysis as unknown as PropertyAnalysis;
     if (analysis) {
       if (typeof analysis.lawnSqft !== 'number') {
         issues.push('Missing lawnSqft');
@@ -169,7 +170,7 @@ export class QualityAgent implements Agent {
     }
     
     // Average numeric values, OR boolean values
-    const analyses = results.map(r => r.analysis).filter(Boolean);
+    const analyses = results.map(r => r.analysis).filter(Boolean) as unknown as PropertyAnalysis[];
     
     const merged = {
       lawnSqft: Math.round(this.average(analyses.map(a => a.lawnSqft))),

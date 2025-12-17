@@ -1,6 +1,6 @@
 
 const GEMINI_KEY = process.env.GOOGLE_AI_STUDIO_KEY;
-const OPENAI_KEY = process.env.OPENAI_API_KEY;
+
 
 export async function quickClassify(text: string, categories: string[]): Promise<string> {
   // Try Gemini first

@@ -30,7 +30,7 @@ export interface AnalysisRequest {
   address: string;
   lat: number;
   lng: number;
-  parcelData?: any;
+  parcelData?: Record<string, unknown>;
   priority: Priority;
   retryOnLowConfidence: boolean;
   createdAt: Date;
@@ -41,7 +41,7 @@ export interface AnalysisResult {
   requestId: string;
   provider: AIProvider;
   model: string;
-  analysis: any;
+  analysis: Record<string, unknown>;
   confidence: number;
   latencyMs: number;
   tokenUsage?: { input: number; output: number };
@@ -118,8 +118,8 @@ export interface SystemStatus {
   metrics: Metrics;
   uptime: number;
   startedAt: Date;
-  videoStatus?: { healthy: boolean; details: any };
-  upscaleStatus?: { healthy: boolean; details: any };
+  videoStatus?: { healthy: boolean; details: Record<string, unknown> };
+  upscaleStatus?: { healthy: boolean; details: Record<string, unknown> };
 }
 
 // Agent interface - all agents implement this
@@ -127,7 +127,7 @@ export interface Agent {
   name: string;
   start(): Promise<void>;
   stop(): Promise<void>;
-  getStatus(): { healthy: boolean; details: any };
+  getStatus(): { healthy: boolean; details: Record<string, unknown> };
 }
 
 // Event types for the event bus
@@ -143,7 +143,7 @@ export type EventType =
 export interface Event {
   type: EventType;
   timestamp: Date;
-  data: any;
+  data: unknown;
 }
 
 export type EventHandler = (event: Event) => void | Promise<void>;

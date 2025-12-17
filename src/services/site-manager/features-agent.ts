@@ -5,6 +5,7 @@
  */
 
 import { Agent, AnalysisResult } from './types';
+import { PropertyAnalysis } from '@/types/property';
 
 // Feature types we track
 // Feature types we track
@@ -91,7 +92,7 @@ export class FeaturesAgent implements Agent {
    */
   extractFeatures(requestId: string, result: AnalysisResult): DetectedFeature[] {
     const features: DetectedFeature[] = [];
-    const analysis = result.analysis;
+    const analysis = result.analysis as unknown as PropertyAnalysis;
     
     if (!analysis) return features;
     
@@ -127,7 +128,7 @@ export class FeaturesAgent implements Agent {
     }
 
     // --- DUMP / JUNK FEATURES ---
-    if (analysis.mattressCount > 0) {
+    if ((analysis.mattressCount || 0) > 0) {
       features.push({
         type: 'mattress',
         confidence: result.confidence,
@@ -137,7 +138,7 @@ export class FeaturesAgent implements Agent {
       });
     }
 
-    if (analysis.furnitureCount > 0) {
+    if ((analysis.furnitureCount || 0) > 0) {
       features.push({
         type: 'furniture',
         confidence: result.confidence,
@@ -147,7 +148,7 @@ export class FeaturesAgent implements Agent {
       });
     }
 
-    if (analysis.applianceCount > 0) {
+    if ((analysis.applianceCount || 0) > 0) {
       features.push({
         type: 'appliance',
         confidence: result.confidence,
@@ -157,7 +158,7 @@ export class FeaturesAgent implements Agent {
       });
     }
     
-    if (analysis.trashBagCount > 0) {
+    if ((analysis.trashBagCount || 0) > 0) {
       features.push({
         type: 'trash_bag',
         confidence: result.confidence,
@@ -167,7 +168,7 @@ export class FeaturesAgent implements Agent {
       });
     }
 
-    if (analysis.debrisPiles > 0) {
+    if ((analysis.debrisPiles || 0) > 0) {
       features.push({
         type: 'construction_debris',
         confidence: result.confidence,
@@ -308,7 +309,7 @@ export class FeaturesAgent implements Agent {
     const featureValues = new Map<FeatureType, { value: any; source: string }[]>();
     
     for (const result of results) {
-      const analysis = result.analysis;
+      const analysis = result.analysis as unknown as PropertyAnalysis;
       if (!analysis) continue;
       
       // Track each feature

@@ -91,13 +91,13 @@ export interface HaulingAgent {
   name: string;
   start(): Promise<void>;
   stop(): Promise<void>;
-  getStatus(): { healthy: boolean; details: any };
+  getStatus(): { healthy: boolean; details: Record<string, unknown> };
 }
 
 // System status
 export interface HaulingSystemStatus {
   healthy: boolean;
-  agents: Record<string, { healthy: boolean; details: any }>;
+  agents: Record<string, { healthy: boolean; details: Record<string, unknown> }>;
   metrics: {
     totalQuotes: number;
     avgConfidence: number;

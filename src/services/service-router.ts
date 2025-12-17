@@ -2,7 +2,7 @@ import { PropertyAnalysis } from '@/types/property';
 import { ServiceType } from './site-manager/types';
 import { ItemizationEngine } from './itemization-engine';
 import { PricingMonitorAgent } from './hauling-manager/pricing-monitor';
-import { DetectedItem as HaulingItem } from './hauling-manager/types';
+import { DetectedItem as HaulingItem, LoadEstimate, PricingBreakdown } from './hauling-manager/types';
 import { DetectedItem as SiteItem } from './site-manager/types';
 
 import { SafetyAgent, SafetyAnalysisResult } from './site-manager/safety-agent';
@@ -13,7 +13,7 @@ import { ItemsAgent } from './site-manager/items-agent';
 export interface RouterResult {
   service: ServiceType;
   items: HaulingItem[];
-  quote?: any; // PricingBreakdown
+  quote?: PricingBreakdown;
   recommendations: string[];
   safety?: SafetyAnalysisResult;
   access?: AccessLogistics;
@@ -112,7 +112,6 @@ export class ServiceRouter {
 
     // Also check user photos (for dump items)
     if (analysis.locationsByImage?.userPhotos) {
-       // @ts-ignore
        const promises = analysis.locationsByImage.userPhotos.map(async (loc, i) => {
          const determinedService = await this.itemsAgent.classifyItem(loc.type);
          return {
@@ -158,15 +157,14 @@ export class ServiceRouter {
     // Mock load estimate for MVP
     const totalVolume = items.length * 10;
     
-    const loadEstimate: any = {
+    const loadEstimate: LoadEstimate = {
       totalVolume,
       totalWeight: items.length * 50,
       truckCapacityUsed: (totalVolume / 400) * 100, // assume 400 cu ft truck
-      vehicleRequired: 'pickup' as const, 
+      vehicleRequired: 'pickup', 
       crewSize: 2,
       estimatedLoadTime: 30,
-      equipmentNeeded: [],
-      safetyRisks: []
+      equipmentNeeded: []
     };
 
     // Auto-scale vehicle based on volume

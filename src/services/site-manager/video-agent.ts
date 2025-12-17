@@ -24,7 +24,7 @@ export class VideoAgent implements Agent {
     this.isProcessing = false;
   }
 
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: !!process.env.REPLICATE_API_TOKEN,
       details: {
@@ -79,14 +79,15 @@ export class VideoAgent implements Agent {
         processingTime: Date.now() - startTime
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[VideoAgent] Error processing video:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         videoId: videoUrl,
         items: [],
-        summary: `Analysis failed: ${error.message || 'Unknown error'}`,
+        summary: `Analysis failed: ${errorMessage}`,
         processingTime: Date.now() - startTime,
-        error: error.message || 'Unknown error'
+        error: errorMessage
       };
     } finally {
       this.isProcessing = false;
