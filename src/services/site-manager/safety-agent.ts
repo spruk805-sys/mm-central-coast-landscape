@@ -1,4 +1,5 @@
 import { Agent } from './types';
+import { analyzeText } from '../llm-client';
 
 export interface Hazard {
   type: 'power_lines' | 'chemicals' | 'sharps' | 'unstable_ground' | 'other';
@@ -35,21 +36,40 @@ export class SafetyAgent implements Agent {
   }
 
   /**
-   * Analyze images or video for safety hazards
+   * Analyze context for safety hazards using LLM
    */
   async analyzeSafety(context: string): Promise<SafetyAnalysisResult> {
     this.isProcessing = true;
     try {
-      // TODO: Implement actual AI vision analysis here
-      console.log(`[SafetyAgent] Analyzing context: ${context}`);
+      console.log(`[SafetyAgent] Analyzing safety context...`);
       
-      // Mock response for now
+      const prompt = `Analyze these property notes for safety hazards: "${context}".
+      Identify hazards like power lines, chemicals, sharps, steep slopes, dogs, etc.
+      Recommend PPE.`;
+
+      const schema = `{
+        "hazards": [{ "type": "string", "severity": "low|medium|high", "description": "string" }],
+        "requiredPPE": ["string"],
+        "warnings": ["string"],
+        "safeToProceed": boolean
+      }`;
+
+      const result = await analyzeText<SafetyAnalysisResult>(prompt, schema);
+      
+      if (result) {
+        return {
+            hazards: result.hazards || [],
+            requiredPPE: result.requiredPPE || ['standard_gloves', 'boots'],
+            warnings: result.warnings || [],
+            safeToProceed: result.safeToProceed ?? true
+        };
+      }
+      
+      // Fallback
       return {
-        hazards: [
-          { type: 'unstable_ground', severity: 'low', description: 'Uneven terrain detected near fence' }
-        ],
-        requiredPPE: ['gloves', 'boots', 'safety_glasses'],
-        warnings: ['Watch your step near the back fence'],
+        hazards: [],
+        requiredPPE: ['gloves', 'boots'],
+        warnings: [],
         safeToProceed: true
       };
     } finally {

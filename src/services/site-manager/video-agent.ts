@@ -79,9 +79,15 @@ export class VideoAgent implements Agent {
         processingTime: Date.now() - startTime
       };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[VideoAgent] Error processing video:', error);
-      throw error;
+      return {
+        videoId: videoUrl,
+        items: [],
+        summary: `Analysis failed: ${error.message || 'Unknown error'}`,
+        processingTime: Date.now() - startTime,
+        error: error.message || 'Unknown error'
+      };
     } finally {
       this.isProcessing = false;
     }

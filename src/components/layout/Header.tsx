@@ -67,8 +67,9 @@ export default function Header() {
             </svg>
             <span>(805) 245-2313</span>
           </a>
-          <Link href="/quote" className="btn btn-primary btn-sm">
-            Get Free Quote
+          <Link href="/quote" className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>Get AI Quote</span>
+            <span>✨</span>
           </Link>
         </div>
 

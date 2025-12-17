@@ -64,6 +64,7 @@ export interface VideoAnalysisResult {
     items: DetectedItem[];
     summary: string;
     processingTime: number;
+    error?: string;
 }
 
 export interface ProviderMetrics {

@@ -52,7 +52,7 @@ export class ServiceRouter {
     const context = analysis.notes.join(' ');
     const [safety, access, seasonality] = await Promise.all([
       this.safetyAgent.analyzeSafety(context),
-      this.accessAgent.analyzeAccess(address),
+      this.accessAgent.analyzeAccess(address, context),
       this.seasonalityAgent.analyzeSeasonality()
     ]);
 

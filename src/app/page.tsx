@@ -146,12 +146,14 @@ export default function Home() {
               your lawn will be the envy of the neighborhood — or we make it right.
             </p>
             <div className={styles.heroActions}>
-              <Link href="/quote" className="btn btn-accent btn-lg">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                  <path d="M9 11l3 3L22 4" />
-                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                </svg>
-                Get Instant Quote — It&apos;s Free
+              <Link href="/quote" className="btn btn-accent btn-lg" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '12px 32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  </svg>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Instant AI Quote</span>
+                </div>
+                <span style={{ fontSize: '0.8rem', opacity: 0.9, fontWeight: 'normal' }}> ✨ Satellite Property Analysis</span>
               </Link>
               <a href="tel:8052452313" className="btn btn-secondary btn-lg">
                 📞 (805) 245-2313
