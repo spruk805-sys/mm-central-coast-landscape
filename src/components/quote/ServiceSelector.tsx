@@ -100,6 +100,38 @@ const services = [
     popular: true,
     imgIcon: true,
   },
+  {
+    id: 'pressure-washing',
+    icon: '/images/icon-cleanup-rake.png',
+    name: 'Pressure Washing',
+    description: 'Driveway, patio, and walkway cleaning.',
+    popular: false,
+    imgIcon: true,
+  },
+  {
+    id: 'solar-cleaning',
+    icon: '/images/icon-garden-flowers.png',
+    name: 'Solar Panel Cleaning',
+    description: 'Maximize efficiency with professional cleaning.',
+    popular: false,
+    imgIcon: true,
+  },
+  {
+    id: 'bin-cleaning',
+    icon: '/images/icon-trash-bin.png',
+    name: 'Trash Bin Cleaning',
+    description: 'Sanitize and deodorize your bins.',
+    popular: false,
+    imgIcon: true,
+  },
+  {
+    id: 'junk-removal',
+    icon: '/images/junk-removal.png',
+    name: 'Junk Removal & Hauling',
+    description: 'Debris, furniture, and dump runs.',
+    popular: true,
+    imgIcon: true,
+  },
 ];
 
 const frequencies = [

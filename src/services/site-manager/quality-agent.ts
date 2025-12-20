@@ -3,7 +3,7 @@
  * Reviews AI outputs and triggers re-analysis when confidence is low
  */
 
-import { Agent, AnalysisResult, AnalysisRequest } from './types';
+import { Agent, AnalysisResult } from './types';
 import { PropertyAnalysis } from '@/types/property';
 
 interface QualityCheck {
@@ -49,7 +49,7 @@ export class QualityAgent implements Agent {
     console.log('[Quality] Stopping...');
   }
   
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: true,
       details: {
@@ -188,7 +188,7 @@ export class QualityAgent implements Agent {
     
     return {
       requestId: results[0].requestId,
-      provider: 'consensus' as any,
+      provider: 'consensus',
       model: 'merged',
       analysis: merged,
       confidence: merged.confidence,

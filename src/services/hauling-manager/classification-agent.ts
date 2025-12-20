@@ -3,7 +3,7 @@
  * Identifies and categorizes items from images
  */
 
-import { HaulingAgent, DetectedItem, ItemCategory, DisposalMethod } from './types';
+import { HaulingAgent, DetectedItem, ItemCategory, DisposalMethod, RawDetectedItem } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 // Item classification rules
@@ -41,7 +41,7 @@ export class ClassificationAgent implements HaulingAgent {
     console.log('[Classification] Stopping...');
   }
   
-  getStatus() {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: true,
       details: {
@@ -54,22 +54,22 @@ export class ClassificationAgent implements HaulingAgent {
   /**
    * Classify raw AI output into structured items
    */
-  classifyItems(rawItems: any[]): DetectedItem[] {
+  classifyItems(rawItems: RawDetectedItem[]): DetectedItem[] {
     return rawItems.map(item => this.classifyItem(item));
   }
   
   /**
    * Classify a single item
    */
-  classifyItem(rawItem: any): DetectedItem {
+  classifyItem(rawItem: RawDetectedItem): DetectedItem {
     const name = (rawItem.name || 'Unknown item').toLowerCase();
     const category = this.detectCategory(name);
     
     this.stats.itemsClassified++;
     this.stats.byCategory[category] = (this.stats.byCategory[category] || 0) + 1;
     
-    const weight = this.parseWeight(rawItem.estimatedWeight);
-    const volume = this.estimateVolume(rawItem.estimatedSize, category);
+    const weight = this.parseWeight(rawItem.estimatedWeight || 0);
+    const volume = this.estimateVolume(rawItem.estimatedSize || '', category);
     
     return {
       id: uuidv4(),
@@ -157,7 +157,7 @@ export class ClassificationAgent implements HaulingAgent {
   /**
    * Check if item is donatable
    */
-  private isDonatable(category: ItemCategory, item: any): boolean {
+  private isDonatable(category: ItemCategory, item: RawDetectedItem): boolean {
     if (!DONATABLE_CATEGORIES.includes(category)) return false;
     // Don't donate if broken/damaged
     const name = (item.name || '').toLowerCase();

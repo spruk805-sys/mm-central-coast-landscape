@@ -1,0 +1,7 @@
+{
+  "id": "fence-iron",
+  "name": "Wrought Iron Fence",
+  "category": "fence",
+  "unit": "linear_ft",
+  "unitCost": 65
+}

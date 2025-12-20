@@ -4,10 +4,9 @@
  * Works with Quality Agent to ensure accurate feature identification
  */
 
-import { Agent, AnalysisResult } from './types';
+import { Agent, AnalysisResult, AIProvider } from './types';
 import { PropertyAnalysis } from '@/types/property';
 
-// Feature types we track
 // Feature types we track
 export type FeatureType = 
   // Landscaping
@@ -20,7 +19,7 @@ export interface DetectedFeature {
   type: FeatureType;
   confidence: number;
   location?: { x: number; y: number; w: number; h: number };
-  source: 'gemini' | 'openai' | 'consensus';
+  source: AIProvider | 'consensus';
   notes?: string;
   service?: 'landscaping' | 'dump';
 }
@@ -77,7 +76,7 @@ export class FeaturesAgent implements Agent {
     this.detectedFeatures.clear();
   }
   
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: true,
       details: {
@@ -101,7 +100,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'tree',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Count: ${analysis.treeCount}`,
         service: 'landscaping'
       });
@@ -111,7 +110,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'bush',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Count: ${analysis.bushCount}`,
         service: 'landscaping'
       });
@@ -121,7 +120,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'garden_bed',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Count: ${analysis.gardenBeds}`,
         service: 'landscaping'
       });
@@ -132,7 +131,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'mattress',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Count: ${analysis.mattressCount}`,
         service: 'dump'
       });
@@ -142,7 +141,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'furniture',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Count: ${analysis.furnitureCount}`,
         service: 'dump'
       });
@@ -152,7 +151,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'appliance',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Count: ${analysis.applianceCount}`,
         service: 'dump'
       });
@@ -162,7 +161,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'trash_bag',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Count: ${analysis.trashBagCount}`,
         service: 'dump'
       });
@@ -172,7 +171,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'construction_debris',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Count: ${analysis.debrisPiles}`,
         service: 'dump'
       });
@@ -183,7 +182,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'pool',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
       });
     }
     
@@ -191,7 +190,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'fence',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Length: ${analysis.fenceLength}ft`,
       });
     }
@@ -200,7 +199,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'driveway',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
       });
     }
     
@@ -209,7 +208,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'lawn',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Area: ${analysis.lawnSqft} sqft`,
       });
     }
@@ -218,7 +217,7 @@ export class FeaturesAgent implements Agent {
       features.push({
         type: 'pathway',
         confidence: result.confidence,
-        source: result.provider as any,
+        source: result.provider,
         notes: `Area: ${analysis.pathwaySqft} sqft`,
       });
     }
@@ -231,7 +230,7 @@ export class FeaturesAgent implements Agent {
             type: loc.type as FeatureType,
             confidence: result.confidence,
             location: { x: loc.x, y: loc.y, w: loc.w || 5, h: loc.h || 5 },
-            source: result.provider as any,
+            source: result.provider,
           });
         }
       }
@@ -304,16 +303,16 @@ export class FeaturesAgent implements Agent {
    */
   compareFeatures(requestId: string, results: AnalysisResult[]): {
     agreements: FeatureType[];
-    disagreements: { feature: FeatureType; values: any[] }[];
+    disagreements: { feature: FeatureType; values: unknown[] }[];
   } {
-    const featureValues = new Map<FeatureType, { value: any; source: string }[]>();
+    const featureValues = new Map<FeatureType, { value: unknown; source: string }[]>();
     
     for (const result of results) {
       const analysis = result.analysis as unknown as PropertyAnalysis;
       if (!analysis) continue;
       
       // Track each feature
-      const features: [FeatureType, any][] = [
+      const features: [FeatureType, unknown][] = [
         ['tree', analysis.treeCount],
         ['bush', analysis.bushCount],
         ['pool', analysis.hasPool],
@@ -330,7 +329,7 @@ export class FeaturesAgent implements Agent {
     }
     
     const agreements: FeatureType[] = [];
-    const disagreements: { feature: FeatureType; values: any[] }[] = [];
+    const disagreements: { feature: FeatureType; values: unknown[] }[] = [];
     
     for (const [feature, values] of featureValues) {
       const uniqueValues = [...new Set(values.map(v => {

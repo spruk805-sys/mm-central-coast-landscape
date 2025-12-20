@@ -34,6 +34,16 @@ export interface DetectedItem {
   hazardous: boolean;
 }
 
+// Raw item from AI (un-sanitized)
+export interface RawDetectedItem {
+  name?: string;
+  quantity?: number;
+  estimatedWeight?: string | number;
+  estimatedSize?: string;
+  disposalType?: string;
+  confidence?: number;
+}
+
 // Load calculation
 export interface LoadEstimate {
   totalWeight: number; // lbs

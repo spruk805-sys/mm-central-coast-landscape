@@ -1,0 +1,10 @@
+{
+  "id": "site-2",
+  "name": "Santa Ynez Estate",
+  "center": {
+    "lat": 34.6041,
+    "lng": -120.0601
+  },
+  "radiusMeters": 250,
+  "active": true
+}

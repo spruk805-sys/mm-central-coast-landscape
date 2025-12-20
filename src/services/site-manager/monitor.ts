@@ -31,6 +31,7 @@ export class MonitorAgent implements Agent {
         openai: { requests: 0, errors: 0, avgLatency: 0, totalTokens: 0, totalCost: 0 },
         claude: { requests: 0, errors: 0, avgLatency: 0, totalTokens: 0, totalCost: 0 },
         local: { requests: 0, errors: 0, avgLatency: 0, totalTokens: 0, totalCost: 0 },
+        consensus: { requests: 0, errors: 0, avgLatency: 0, totalTokens: 0, totalCost: 0 },
       },
       totalTokens: 0,
       totalCost: 0,
@@ -47,7 +48,7 @@ export class MonitorAgent implements Agent {
     console.log('[Monitor] Stopping...');
   }
   
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     const errorRate = this.metrics.totalRequests > 0 
       ? this.metrics.failedRequests / this.metrics.totalRequests 
       : 0;

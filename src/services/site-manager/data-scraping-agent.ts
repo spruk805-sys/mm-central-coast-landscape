@@ -27,7 +27,7 @@ export interface ScrapedData {
   sourceId: string;
   type: DataSourceType;
   propertyId: string;
-  data: any;
+  data: Record<string, unknown>;
   quality: number; // 0-1
   fetchedAt: Date;
 }
@@ -147,7 +147,7 @@ export class DataScrapingAgent implements Agent {
     console.log('[DataScraping] Stopping...');
   }
   
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     const activeSources = this.sources.filter(s => s.enabled && s.status === 'active');
     return {
       healthy: activeSources.length > 0,

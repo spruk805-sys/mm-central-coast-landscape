@@ -4,11 +4,17 @@ import AnthemPlayer from "./AnthemPlayer";
 
 const services = [
   "Lawn Maintenance",
-  "Tree Trimming",
-  "Fence Installation",
-  "Sprinkler Repair",
-  "Garden Design",
-  "Deck & Pathway",
+  "Tree Trimming & Care",
+  "Junk Removal & Hauling",
+  "Pressure Washing",
+  "Solar Panel Cleaning",
+  "Trash Bin Cleaning",
+  "Irrigation & Sprinklers",
+  "Garden Design & Planting",
+  "Fence Installation & Repair",
+  "Hardscaping & Pathways",
+  "Sod Installation",
+  "TrashCaddy Service",
 ];
 
 const serviceAreas = [
@@ -38,7 +44,7 @@ export default function Footer() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className={styles.logoTitle}>MM Central Coast Landscape</h3>
+                  <h3 className={styles.logoTitle}>MM Central Coast Landscaping</h3>
                   <p className={styles.license}>License #101775</p>
                 </div>
               </div>
@@ -136,7 +142,7 @@ export default function Footer() {
         <div className="container">
           <div className={styles.bottomContent}>
             <p className={styles.copyright}>
-              © {currentYear} MM Central Coast Landscape, Inc. All Rights Reserved.
+              © {currentYear} MM Central Coast Landscaping, Inc. All Rights Reserved.
             </p>
             <div className={styles.bottomLinks}>
               <Link href="/privacy">Privacy Policy</Link>

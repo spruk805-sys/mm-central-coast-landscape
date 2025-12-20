@@ -1,0 +1,10 @@
+{
+  "id": "book-001",
+  "customerId": "cust-001",
+  "propertyId": "prop-001",
+  "serviceDate": "2024-11-15T00:00:00.000Z",
+  "timeSlot": "morning",
+  "status": "completed",
+  "notes": "Full estate cleanup - 3 crew members",
+  "createdAt": "2024-11-10T00:00:00.000Z"
+}

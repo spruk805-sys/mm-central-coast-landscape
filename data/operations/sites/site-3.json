@@ -1,0 +1,10 @@
+{
+  "id": "site-3",
+  "name": "Solvang Square",
+  "center": {
+    "lat": 34.5958,
+    "lng": -120.1376
+  },
+  "radiusMeters": 150,
+  "active": true
+}

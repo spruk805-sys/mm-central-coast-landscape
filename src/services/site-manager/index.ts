@@ -15,16 +15,22 @@ import {
 import { MonitorAgent } from './monitor';
 import { OrchestratorAgent } from './orchestrator';
 import { AutoScalerAgent } from './auto-scaler';
+import { PropertyAnalysis } from '../../types/property';
 import { QualityAgent } from './quality-agent';
 import { FeaturesAgent } from './features-agent';
 import { UpscaleAgent } from './upscale-agent';
+import { VideoAgent } from './video-agent';
+import { MaterialsLibraryService } from '../estimating/materials-library';
+import { QuoteAgent } from './quote-agent';
+import { SpatialAgent } from './spatial-agent';
+import { getOperationsManager } from '../operations/manager';
 
 // AI API Executors
-async function executeGemini(request: AnalysisRequest): Promise<any> {
+async function executeGemini(request: AnalysisRequest): Promise<Record<string, unknown> & { usage: { input: number; output: number } }> {
   const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
   if (!apiKey) throw new Error('Gemini API key not configured');
 
-  const parts: any[] = [{ text: buildPrompt(request) }];
+  const parts: ( { text: string } | { inline_data: { mime_type: string; data: string } } )[] = [{ text: buildPrompt(request) }];
   
   // Add images
   for (const img of request.images) {
@@ -57,11 +63,11 @@ async function executeGemini(request: AnalysisRequest): Promise<any> {
   return { ...analysis, usage: { input: usage?.promptTokenCount || 0, output: usage?.candidatesTokenCount || 0 } };
 }
 
-async function executeOpenAI(request: AnalysisRequest): Promise<any> {
+async function executeOpenAI(request: AnalysisRequest): Promise<Record<string, unknown> & { usage: { input: number; output: number } }> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OpenAI API key not configured');
 
-  const content: any[] = [{ type: 'text', text: buildPrompt(request) }];
+  const content: ( { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string; detail: string } } )[] = [{ type: 'text', text: buildPrompt(request) }];
   
   for (const img of request.images) {
     content.push({ type: 'text', text: `\n--- IMAGE: ${img.label} ---\n` });
@@ -124,7 +130,7 @@ Coordinates: ${request.lat}, ${request.lng}
 }`;
 }
 
-function parseAIResponse(text: string): any {
+function parseAIResponse(text: string): PropertyAnalysis & { confidence: number; notes: string[] } {
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   const json = JSON.parse(cleaned);
   
@@ -140,7 +146,7 @@ function parseAIResponse(text: string): any {
     drivewayPresent: Boolean(json.drivewayPresent),
     confidence: Math.min(1, Math.max(0, json.confidence || 0.7)),
     notes: Array.isArray(json.notes) ? json.notes : [],
-  };
+  } as PropertyAnalysis & { confidence: number; notes: string[] };
 }
 
 // Default configuration
@@ -152,17 +158,18 @@ const DEFAULT_CONFIG: SiteManagerConfig = {
   logLevel: 'info',
 };
 
-import { VideoAgent } from './video-agent';
-
-// ... imports ...
-
 export class SiteManager {
   private config: SiteManagerConfig;
   private monitor: MonitorAgent;
   private orchestrator: OrchestratorAgent;
   private autoScaler: AutoScalerAgent;
+  private qualityAgent: QualityAgent;
+  private featuresAgent: FeaturesAgent;
   private upscaleAgent: UpscaleAgent;
   private videoAgent: VideoAgent;
+  private spatialAgent: SpatialAgent;
+  private materialsLibrary: MaterialsLibraryService;
+  private quoteAgent: QuoteAgent;
   private startedAt: Date;
   private isRunning = false;
 
@@ -184,11 +191,18 @@ export class SiteManager {
     // Initialize AutoScaler
     this.autoScaler = new AutoScalerAgent({ maxConcurrent: this.config.maxConcurrent });
     
-    // Initialize UpscaleAgent
+    // Initialize Quality/Features/Upscale
+    this.qualityAgent = new QualityAgent();
+    this.featuresAgent = new FeaturesAgent();
     this.upscaleAgent = new UpscaleAgent({ enabled: true });
     
     // Initialize VideoAgent
     this.videoAgent = new VideoAgent();
+
+    // Initialize Materials, Spatial & Quote Agent
+    this.materialsLibrary = new MaterialsLibraryService();
+    this.spatialAgent = new SpatialAgent();
+    this.quoteAgent = new QuoteAgent(this.materialsLibrary);
 
     // Wire AutoScaler to Orchestrator
     this.autoScaler.setExecutor(async (request) => {
@@ -209,6 +223,8 @@ export class SiteManager {
     await this.autoScaler.start();
     await this.upscaleAgent.start();
     await this.videoAgent.start();
+    await this.spatialAgent.start();
+    await this.quoteAgent.start();
     this.isRunning = true;
     console.log('[SiteManager] Started successfully');
   }
@@ -225,6 +241,8 @@ export class SiteManager {
     await this.autoScaler.stop();
     await this.upscaleAgent.stop();
     await this.videoAgent.stop();
+    await this.spatialAgent.stop();
+    await this.quoteAgent.stop();
     this.isRunning = false;
   }
 
@@ -236,7 +254,7 @@ export class SiteManager {
     address: string;
     lat: number;
     lng: number;
-    parcelData?: any;
+    parcelData?: Record<string, unknown>;
     priority?: Priority;
     retryOnLowConfidence?: boolean;
   }): Promise<AnalysisResult> {
@@ -272,8 +290,21 @@ export class SiteManager {
   /**
    * Analyze a video stream for specific items
    */
-  async analyzeVideo(url: string, service: 'landscaping' | 'dump'): Promise<any> {
-    return this.videoAgent.analyzeVideo(url, service);
+  async analyzeVideo(url: string, service: 'landscaping' | 'dump'): Promise<Record<string, unknown>> {
+    const result = await this.videoAgent.analyzeVideo(url, service);
+    return result as unknown as Record<string, unknown>;
+  }
+
+  /**
+   * Notify the Site Manager of a Geofence event (from GPS Agent)
+   * This allows the system to trigger a quote request if we've entered a new site.
+   */
+  async notifyGeofenceEvent(employeeId: string, siteId: string, type: 'ENTRY' | 'EXIT') {
+    console.log(`[SiteManager] Received GPS Alert: ${employeeId} ${type} site ${siteId}`);
+    if (type === 'ENTRY') {
+      // Potentially trigger the QuoteAgent to look for new visual data
+      // For MVP,เราเพียงบันทึกเหตุการณ์
+    }
   }
 
   /**
@@ -290,7 +321,7 @@ export class SiteManager {
     ): Promise<AnalysisResult> => {
       const startTime = Date.now();
       
-      let analysis: any;
+      let analysis: Record<string, unknown> & { confidence?: number; usage?: { input: number; output: number } };
       
       if (provider === 'gemini') {
         analysis = await executeGemini(request);
@@ -322,12 +353,28 @@ export class SiteManager {
     const metrics = this.monitor.getMetrics();
 
     return {
-      healthy: monitorStatus.healthy && orchestratorStatus.healthy && this.upscaleAgent.getStatus().healthy && this.videoAgent.getStatus().healthy,
+      healthy: monitorStatus.healthy && orchestratorStatus.healthy && (this.upscaleAgent.getStatus().healthy as boolean) && (this.videoAgent.getStatus().healthy as boolean) && (this.quoteAgent.getStatus().healthy as boolean),
       status: monitorStatus.healthy ? 'healthy' : 'degraded',
-      activeWorkers: orchestratorStatus.details.activeRequests,
+      activeWorkers: (orchestratorStatus.details.activeRequests as number) || 0,
+      agents: [
+        { name: 'Monitor', ...monitorStatus },
+        { name: 'Orchestrator', ...orchestratorStatus },
+        { name: 'AutoScaler', ...autoScalerStatus },
+        { name: 'Video Vision', ...this.videoAgent.getStatus() },
+        { name: 'Spatial Analyst', ...this.spatialAgent.getStatus() },
+        { name: 'Quote Engine', ...this.quoteAgent.getStatus() },
+        { name: 'Geofence Guardian', ...getOperationsManager().getGPSAgent().getStatus() },
+        { name: 'Deployment Sentinel', ...getOperationsManager().getDeploymentAgent().getStatus() },
+        { name: 'Activity Intelligence', ...getOperationsManager().getActivityAgent().getStatus() }
+      ],
       upscaleStatus: this.upscaleAgent.getStatus(),
       videoStatus: this.videoAgent.getStatus(),
-      queueDepth: autoScalerStatus.details.queueDepth,
+      quoteStatus: this.quoteAgent.getStatus(),
+      gpsStatus: getOperationsManager().getGPSAgent().getStatus(),
+      personnelAlerts: getOperationsManager().getDeploymentAgent().getPersonnelAlerts(),
+      activeActivity: getOperationsManager().getActivityAgent().getActiveInferences(),
+      jobHistory: getOperationsManager().getJobHistoryService().getAllHistory().slice(-5), // Last 5 entries
+      queueDepth: Number(autoScalerStatus.details.queueDepth) || 0,
       providers: {
         gemini: {
           status: this.monitor.getProviderHealth('gemini'),
@@ -339,6 +386,10 @@ export class SiteManager {
         },
         claude: { status: 'healthy', errorRate: 0 },
         local: { status: 'healthy', errorRate: 0 },
+        consensus: {
+          status: this.monitor.getProviderHealth('consensus'),
+          errorRate: metrics.byProvider.consensus.errors / (metrics.byProvider.consensus.requests || 1),
+        },
       },
       metrics,
       uptime: Date.now() - this.startedAt.getTime(),

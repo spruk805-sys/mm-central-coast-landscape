@@ -1,0 +1,10 @@
+{
+  "id": "cust-002",
+  "name": "Maria Gonzalez",
+  "email": "maria.g@email.com",
+  "phone": "(805) 555-5678",
+  "address": "567 Vineyard Lane, Solvang, CA 93463",
+  "lat": 34.5958,
+  "lng": -120.1376,
+  "createdAt": "2024-03-22T00:00:00.000Z"
+}

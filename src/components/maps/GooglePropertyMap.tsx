@@ -70,6 +70,11 @@ export default function GooglePropertyMap({
       return;
     }
 
+    if (!window.isSecureContext) {
+      alert("Location services require a secure connection (HTTPS) on mobile devices. Please use an HTTPS tunnel for testing.");
+      return;
+    }
+
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {

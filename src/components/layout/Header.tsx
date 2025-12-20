@@ -8,6 +8,7 @@ import styles from "./Header.module.css";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/services", label: "Services" },
+  { href: "/dump-quote", label: "Junk Removal" },
   { href: "/about", label: "About" },
   { href: "/gallery", label: "Gallery" },
   { href: "/contact", label: "Contact" },
@@ -32,7 +33,7 @@ export default function Header() {
           <div className={styles.logoIcon}>
             <Image 
               src="/images/logo.png" 
-              alt="MM Central Coast Landscape" 
+              alt="MM Central Coast Landscaping" 
               width={50} 
               height={50}
               priority
@@ -40,7 +41,7 @@ export default function Header() {
           </div>
           <div className={styles.logoText}>
             <span className={styles.logoTitle}>MM Central Coast</span>
-            <span className={styles.logoSubtitle}>Landscape</span>
+            <span className={styles.logoSubtitle}>Landscaping</span>
           </div>
         </Link>
 

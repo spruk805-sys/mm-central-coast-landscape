@@ -41,7 +41,7 @@ export class AutoScalerAgent implements Agent {
     this.queue = [];
   }
   
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: true,
       details: {
@@ -134,9 +134,10 @@ export class AutoScalerAgent implements Agent {
     try {
       const result = await this.executor!(item.request);
       item.resolve(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check for rate limiting - exponential backoff
-      if (error.message?.includes('Rate Limited') || error.message?.includes('429')) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (errorMsg.includes('Rate Limited') || errorMsg.includes('429')) {
         console.log(`[AutoScaler] Rate limited, re-queuing ${item.request.id}`);
         // Re-queue with delay
         setTimeout(() => {
@@ -144,7 +145,7 @@ export class AutoScalerAgent implements Agent {
           this.processQueue();
         }, 30000); // 30 second delay
       } else {
-        item.reject(error);
+        item.reject(error instanceof Error ? error : new Error(String(error)));
       }
     }
   }

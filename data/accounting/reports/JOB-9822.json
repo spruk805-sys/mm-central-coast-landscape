@@ -1,0 +1,15 @@
+{
+  "jobId": "JOB-9822",
+  "revenue": 8400,
+  "cost": 4100,
+  "grossProfit": 4300,
+  "marginPercent": 51.2,
+  "breakdown": {
+    "labor": 1800,
+    "disposal": 400,
+    "fuel": 15,
+    "materials": 600,
+    "overhead": 1285,
+    "totalCost": 4100
+  }
+}

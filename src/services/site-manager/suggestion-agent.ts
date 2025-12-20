@@ -61,7 +61,7 @@ export class SuggestionAgent implements Agent {
     console.log('[Suggestion] Stopping...');
   }
   
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: true,
       details: {

@@ -2,7 +2,7 @@ export default function LocalBusinessSchema() {
   const schema = {
     "@context": "https://schema.org",
     "@type": "LandscapingBusiness",
-    name: "MM Central Coast Landscape",
+    name: "MM Central Coast Landscaping",
     image: "https://mmcentralcoastlandscape.com/images/logo.png",
     "@id": "https://mmcentralcoastlandscape.com",
     url: "https://mmcentralcoastlandscape.com",

@@ -1,49 +1,60 @@
-# MM Central Coast Landscape
+# MM Central Coast Landscape | AI-Powered Platform
 
-A modern, AI-powered landscaping website for MM Central Coast Landscape (Santa Ynez Valley), built with Next.js 14.
+*The future of landscaping and property services in the Santa Ynez Valley.*
 
-## 🤖 Features
+## 🚀 Overview
 
-### AI Property Analysis
-Automatically generates landscaping quotes using multi-source AI vision:
-- **Verified Boundaries**: Integrates **Regrid Parcel API** for exact lot dimensions and APN.
-- **3D Visualization**: Fetches **Google Aerial View** cinematic drone-style 3D videos.
-- **Multi-Image Analysis**: Simultaneously analyzes satellite (3 zoom levels), street view (3 angles), and user-uploaded photos.
-- **Detailed Estimates**: Lawn sqft, tree counts, fence length, and more.
+A high-performance, premium web application built with **Next.js 15** and **SAM 3 Video Intelligence**. This platform automates property analysis, quoting, and operational management for MM Central Coast Landscape.
 
-### Intelligent Quoting
-- **Instant Estimates**: Real-time pricing based on AI data.
-- **Dump/Haul-Away**: Dedicated AI analyis for junk removal photos.
-- **GPS Integration**: One-click "Use My Location" and photo geotagging.
+## 🤖 Core AI Technology
+
+### SAM 3 Video Intelligence
+
+- **Pixel-Accurate Segmentation**: Uses Meta's SAM 3 via Replicate to identify furniture, trees, debris, and landscapes from video input.
+- **Multi-Service Router**: Intelligent routing for Landscaping, Junk Removal, Solar Cleaning, and Pressure Washing.
+
+### Multi-Agent Consensus Engine
+
+- **Features Agent**: Extracts property metrics (sqft, count, length).
+- **Safety Agent**: Identifies hazards (power lines, chemicals).
+- **Access Agent**: Checks vehicle clearance and gate width.
+- **Seasonality Agent**: Recommends services based on foliage state.
+- **Quality Agent**: Automated re-analysis for low-confidence outputs.
+- **Activity Agent**: Behavioral intelligence that infers tasks (mowing, solar cleaning) from GPS pattern analysis.
+
+## 🛠️ Operational Infrastructure (Phase 3)
+
+- **Deployment Sentinel**: Real-time compliance monitoring ("Ghost" and "Out of Bounds" alerts).
+- **Employee Geofencing**: Real-time location tracking for job site check-ins.
+- **Time Clock**: Integrated shift management with geofence validation.
+- **Job History Service**: Aggregated activity logs and time-on-task reporting.
+- **QuickBooks Sync**: Automated invoicing and payroll integration.
+- **Cost Accounting**: Real-time job profitability (P&L) reporting.
 
 ## 🚀 Getting Started
 
 1. **Install dependencies:**
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-2. **Configure Environment Variables:**
-Create a `.env.local` file with:
-```bash
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key
-GOOGLE_AI_STUDIO_KEY=your_key
-REGRID_API_KEY=your_key
-RESEND_API_KEY=your_key
-```
+2. **Configure Environment:**
+   Copy `.env.example` to `.env.local` and populate your API keys (Google Maps, Gemini, Replicate, etc.).
 
-3. **Run the development server:**
-```bash
-npm run dev
-```
+3. **Run Development:**
+   ```bash
+   npm run dev
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser.
+4. **Build for Production:**
+   ```bash
+   npm run build
+   ```
 
 ## 🛠️ Tech Stack
-- **Framework**: Next.js 14 (App Router)
-- **AI**: Google Gemini Vision Pro
-- **Maps**: Google Maps JavaScript API, Static API, Aerial View API
-- **Data**: Regrid Parcel API
-- **Styling**: CSS Modules
-- **Email**: Resend API
 
+- **Framework**: Next.js 15 (App Router)
+- **AI**: Gemini 1.5 Pro, Vision Pro, SAM 3
+- **Maps**: Google Maps JS SDK + Static API + Aerial View
+- **Infrastructure**: ArcGIS/Parcel Data, Node-Next Backend
+- **Styling**: Vanilla CSS (High-Performance)

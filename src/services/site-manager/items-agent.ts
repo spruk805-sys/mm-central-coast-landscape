@@ -32,7 +32,7 @@ export class ItemsAgent implements Agent {
     console.log(`[${this.name}] Stopped`);
   }
 
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: this.isRunning,
       details: {

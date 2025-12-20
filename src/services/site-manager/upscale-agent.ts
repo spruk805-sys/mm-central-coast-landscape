@@ -48,7 +48,7 @@ export class UpscaleAgent implements Agent {
     this.cache.clear();
   }
 
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: this.isRunning && !!this.replicate,
       details: {

@@ -1,0 +1,10 @@
+{
+  "id": "book-003",
+  "customerId": "cust-002",
+  "propertyId": "prop-002",
+  "serviceDate": "2024-12-20T00:00:00.000Z",
+  "timeSlot": "morning",
+  "status": "pending",
+  "notes": "Pre-holiday cleanup",
+  "createdAt": "2024-12-10T00:00:00.000Z"
+}

@@ -4,7 +4,7 @@
  */
 
 import { getSAMAgent } from '../site-manager/sam-agent';
-import { HaulingAgent, HaulingAnalysisRequest } from './types';
+import { HaulingAgent, HaulingAnalysisRequest, RawDetectedItem } from './types';
 
 export class ItemOrchestratorAgent implements HaulingAgent {
   name = 'ItemOrchestrator';
@@ -22,7 +22,7 @@ export class ItemOrchestratorAgent implements HaulingAgent {
     console.log('[ItemOrchestrator] Stopping...');
   }
   
-  getStatus() {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: true,
       details: {
@@ -35,7 +35,7 @@ export class ItemOrchestratorAgent implements HaulingAgent {
   /**
    * Analyze images using Gemini, augmented by SAM 3 segmentation
    */
-  async analyzeImages(request: HaulingAnalysisRequest): Promise<any[]> {
+  async analyzeImages(request: HaulingAnalysisRequest): Promise<RawDetectedItem[]> {
     const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
     if (!apiKey) throw new Error('Gemini API key not configured');
     
@@ -88,7 +88,7 @@ export class ItemOrchestratorAgent implements HaulingAgent {
     // 2. Build Prompt with SAM context
     const prompt = this.buildPrompt(request.description, samSummary);
     
-    const parts: any[] = [{ text: prompt }];
+    const parts: ( { text: string } | { inline_data: { mime_type: string; data: string } } )[] = [{ text: prompt }];
     
     for (const img of request.images) {
       parts.push({
@@ -160,7 +160,7 @@ Return ONLY valid JSON array:
   /**
    * Parse AI response
    */
-  private parseResponse(text: string): any[] {
+  private parseResponse(text: string): RawDetectedItem[] {
     try {
       const cleaned = text
         .replace(/```json\n?/g, '')

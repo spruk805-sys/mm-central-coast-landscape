@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import FloatingCTA from "@/components/layout/FloatingCTA";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import LocalBusinessSchema from "@/components/seo/LocalBusinessSchema";
 
@@ -28,7 +25,7 @@ export const viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://mmcentralcoastlandscape.com"),
   title:
-    "MM Central Coast Landscape | Expert Landscaping Services Santa Ynez Valley",
+    "MM Central Coast Landscaping | Expert Services in Santa Ynez Valley",
   description:
     "Professional landscaping services including yard maintenance, lawn care, tree trimming, fence installation, and sprinkler repair. Serving Solvang, Buellton, Santa Ynez, and Los Olivos for over 29 years.",
   keywords: [
@@ -41,24 +38,24 @@ export const metadata: Metadata = {
     "sprinkler repair",
     "fence installation",
   ],
-  authors: [{ name: "MM Central Coast Landscape" }],
+  authors: [{ name: "MM Central Coast Landscaping" }],
   icons: {
     icon: "/images/favicon.png",
     apple: "/images/logo.png",
   },
   openGraph: {
-    title: "MM Central Coast Landscape | Expert Landscaping Services",
+    title: "MM Central Coast Landscaping | Expert Services",
     description:
       "Professional landscaping services for the Santa Ynez Valley. Get a free quote today!",
     type: "website",
     locale: "en_US",
     url: "https://mmcentralcoastlandscape.com",
     images: ["/images/logo.png"],
-    siteName: "MM Central Coast Landscape",
+    siteName: "MM Central Coast Landscaping",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MM Central Coast Landscape | Expert Landscaping Services",
+    title: "MM Central Coast Landscaping | Expert Services",
     description:
       "Professional landscaping services for the Santa Ynez Valley. Get a free quote today!",
     images: ["/images/logo.png"],
@@ -85,10 +82,7 @@ export default function RootLayout({
         <LocalBusinessSchema />
       </head>
       <body>
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <FloatingCTA />
+        {children}
       </body>
     </html>
   );

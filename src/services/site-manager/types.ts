@@ -4,7 +4,7 @@
  */
 
 // AI Model Providers
-export type AIProvider = 'gemini' | 'openai' | 'claude' | 'local';
+export type AIProvider = 'gemini' | 'openai' | 'claude' | 'local' | 'consensus';
 
 // Request priority levels
 export type Priority = 'urgent' | 'high' | 'standard' | 'low';
@@ -120,6 +120,12 @@ export interface SystemStatus {
   startedAt: Date;
   videoStatus?: { healthy: boolean; details: Record<string, unknown> };
   upscaleStatus?: { healthy: boolean; details: Record<string, unknown> };
+  quoteStatus?: { healthy: boolean; details: Record<string, unknown> };
+  gpsStatus?: { healthy: boolean; details: Record<string, unknown> };
+  agents: Array<{ name: string; healthy: boolean; details: Record<string, unknown> }>;
+  personnelAlerts?: Array<{ employeeId: string; type: string; message: string; severity: string; timestamp: Date }>;
+  activeActivity?: Array<{ employeeId: string; activity: string; confidence: number; startTime: Date }>;
+  jobHistory?: Array<{ id: string; employeeId: string; siteId: string; date: string; activities: Array<{ task: string; durationMinutes: number }> }>;
 }
 
 // Agent interface - all agents implement this

@@ -128,9 +128,9 @@ export class HaulingManager {
         quoteGenerator: this.quoteGenerator.getStatus(),
       },
       metrics: {
-        totalQuotes: this.quoteGenerator.getStatus().details.quotesStored,
-        avgConfidence: this.quoteGenerator.getStatus().details.stats.avgConfidence,
-        itemsProcessed: this.classifier.getStatus().details.itemsClassified,
+        totalQuotes: (this.quoteGenerator.getStatus().details.quotesStored as number) || 0,
+        avgConfidence: (this.quoteGenerator.getStatus().details.stats.avgConfidence as number) || 0,
+        itemsProcessed: (this.classifier.getStatus().details.itemsClassified as number) || 0,
       },
       uptime: Date.now() - this.startedAt.getTime(),
     };

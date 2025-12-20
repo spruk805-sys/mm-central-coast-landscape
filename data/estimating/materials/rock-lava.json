@@ -1,0 +1,7 @@
+{
+  "id": "rock-lava",
+  "name": "Red Lava Rock",
+  "category": "rock",
+  "unit": "ton",
+  "unitCost": 150
+}

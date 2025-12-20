@@ -20,7 +20,7 @@ export class SeasonalityAgent implements Agent {
     this.isProcessing = false;
   }
 
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     return {
       healthy: true,
       details: { isProcessing: this.isProcessing }

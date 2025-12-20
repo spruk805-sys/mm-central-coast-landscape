@@ -3,7 +3,7 @@
  * Routes requests to the best available AI model based on load, health, and cost
  */
 
-import { Agent, AIProvider, ModelConfig, AnalysisRequest, AnalysisResult, HealthStatus } from './types';
+import { Agent, AIProvider, ModelConfig, AnalysisRequest, AnalysisResult } from './types';
 import { MonitorAgent } from './monitor';
 
 // Default model configurations
@@ -50,7 +50,7 @@ export class OrchestratorAgent implements Agent {
     console.log('[Orchestrator] Stopping...');
   }
   
-  getStatus(): { healthy: boolean; details: any } {
+  getStatus(): { healthy: boolean; details: Record<string, unknown> } {
     const availableModels = this.getAvailableProviders();
     return {
       healthy: availableModels.length > 0,
@@ -166,12 +166,12 @@ export class OrchestratorAgent implements Agent {
       
       return result;
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       const latency = Date.now() - startTime;
-      const errorMsg = error?.message || String(error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
       
       // Record failure
-      this.monitor.recordRequest(provider, latency, false, errorMsg);
+      this.monitor.recordRequest(provider, latency, false, 0, 0, errorMsg);
       
       // Handle rate limiting
       if (errorMsg.includes('Rate Limited') || errorMsg.includes('429')) {
@@ -210,8 +210,8 @@ export class OrchestratorAgent implements Agent {
       
       try {
         return await this.execute(request, provider, executor);
-      } catch (error: any) {
-        console.warn(`[Orchestrator] ${provider} failed, trying next...`, error.message);
+      } catch (error: unknown) {
+        console.warn(`[Orchestrator] ${provider} failed, trying next...`, error instanceof Error ? error.message : String(error));
         // Continue to next provider
       }
     }

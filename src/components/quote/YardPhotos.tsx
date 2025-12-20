@@ -19,13 +19,19 @@ interface YardPhotosProps {
 
 export default function YardPhotos({ onPhotosChange, coordinates: propCoordinates }: YardPhotosProps) {
   const [photos, setPhotos] = useState<YardPhoto[]>([]);
-  const [gpsStatus, setGpsStatus] = useState<'idle' | 'getting' | 'success' | 'error'>('idle');
+  const [gpsStatus, setGpsStatus] = useState<'idle' | 'getting' | 'success' | 'error'>(propCoordinates ? 'success' : 'idle');
   const [currentGps, setCurrentGps] = useState<Coordinates | null>(propCoordinates || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const getGpsLocation = () => {
     if (!navigator.geolocation) {
+      setGpsStatus('error');
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      console.warn("[YardPhotos] Geolocation requires a secure context (HTTPS)");
       setGpsStatus('error');
       return;
     }
@@ -39,7 +45,6 @@ export default function YardPhotos({ onPhotosChange, coordinates: propCoordinate
         };
         setCurrentGps(coords);
         setGpsStatus('success');
-        console.log("[YardPhotos] GPS location:", coords);
       },
       (error) => {
         console.error("[YardPhotos] GPS error:", error);
@@ -51,13 +56,9 @@ export default function YardPhotos({ onPhotosChange, coordinates: propCoordinate
 
   // Get GPS location on mount
   useEffect(() => {
-    if (propCoordinates) {
-      setCurrentGps(propCoordinates);
-      setGpsStatus('success');
-    } else {
+    if (!propCoordinates) {
       getGpsLocation();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propCoordinates]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,0 +1,7 @@
+{
+  "id": "fence-vinyl",
+  "name": "White Vinyl Fence",
+  "category": "fence",
+  "unit": "linear_ft",
+  "unitCost": 45
+}
